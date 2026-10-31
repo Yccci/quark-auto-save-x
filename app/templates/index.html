@@ -11746,7 +11746,7 @@
           if (!suggestion) return 0;
           const raw = suggestion.share_total_size != null
             ? suggestion.share_total_size
-            : (suggestion.total_size != null ? suggestion.total_size : suggestion.size_hint);
+            : suggestion.total_size;
           const size = parseFloat(raw);
           return Number.isFinite(size) && size > 0 ? size : 0;
         },
@@ -11780,48 +11780,13 @@
             return sum + this.toIntSize(raw);
           }, 0);
         },
-        parseSizeFromContent(content) {
-          if (!content) return 0;
-          const normalized = String(content).replace(/：/g, ':').replace(/，/g, ',');
-          let match = normalized.match(/大小\s*:\s*(-|[^\s,]+)/i);
-          let text = '';
-          if (match && match[1].trim() !== '-') {
-            text = match[1].trim().toUpperCase();
-          } else {
-            match = normalized.match(/(\d+(?:\.\d+)?)\s*(TB|GB|MB|KB|G|M|K|T)\b/i);
-            if (!match) return 0;
-            text = `${match[1]}${match[2].toUpperCase()}`;
-          }
-          const unitMap = {
-            B: 1, K: 1024, KB: 1024, M: 1048576, MB: 1048576,
-            G: 1073741824, GB: 1073741824, T: 1099511627776, TB: 1099511627776
-          };
-          const parsed = text.match(/^([\d.]+)\s*([A-Z]+)?$/);
-          if (!parsed) return 0;
-          const num = parseFloat(parsed[1]);
-          const multiplier = unitMap[parsed[2] || 'B'];
-          return multiplier ? Math.floor(num * multiplier) : 0;
-        },
-        parseSizeFromTexts(...texts) {
-          for (const text of texts) {
-            const size = this.parseSizeFromContent(text);
-            if (size > 0) return size;
-          }
-          return 0;
-        },
-        // 优先用分享页汇总大小，其次累加当前列表，最后从标题/简介里的「大小:1.5GB」解析
-        resolveSuggestionTotalSize(link, shareDetail) {
+        // 优先用分享页汇总大小，没有时累加当前文件列表，不从标题或简介解析
+        resolveSuggestionTotalSize(shareDetail) {
           const apiSize = shareDetail && typeof shareDetail.share_total_size === 'number'
             ? shareDetail.share_total_size
             : 0;
           if (apiSize > 0) return apiSize;
-          const summed = this.calcShareListSize(shareDetail);
-          if (summed > 0) return summed;
-          return this.parseSizeFromTexts(
-            link && link.taskname,
-            link && link.content,
-            link && link.size_hint
-          );
+          return this.calcShareListSize(shareDetail);
         },
         searchSuggestions(index, taskname, deep = 1) {
           if (taskname.length < 2) {
@@ -11945,7 +11910,7 @@
                     }
                     const enriched = { ...link };
                     enriched.share_author_name = this.extractShareAuthorName(shareDetail);
-                    enriched.share_total_size = this.resolveSuggestionTotalSize(link, shareDetail);
+                    enriched.share_total_size = this.resolveSuggestionTotalSize(shareDetail);
                     // 屏蔽分享者：匹配昵称的资源不进入结果列表
                     if (this.isBlockedSharerByName(enriched.share_author_name)) {
                       resolve(null);
@@ -11967,9 +11932,7 @@
                     const enriched = { ...link };
                     if (response.data.data) {
                       enriched.share_author_name = this.extractShareAuthorName(response.data.data);
-                      enriched.share_total_size = this.resolveSuggestionTotalSize(link, response.data.data);
-                    } else {
-                      enriched.share_total_size = this.parseSizeFromTexts(link.taskname, link.content, link.size_hint);
+                      enriched.share_total_size = this.resolveSuggestionTotalSize(response.data.data);
                     }
                     if (this.isBlockedSharerByName(enriched.share_author_name)) {
                       resolve(null);
@@ -11990,10 +11953,7 @@
                 this.smart_param.validateProgress.current++;
                 this.smart_param.validateProgress.valid++;
                 
-                resolve({
-                  ...link,
-                  share_total_size: this.parseSizeFromTexts(link.taskname, link.content, link.size_hint)
-                });
+                resolve({ ...link });
               });
             });
           };
