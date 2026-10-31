@@ -1364,6 +1364,7 @@
                               <small class="text-muted">
                                 <a :href="suggestion.shareurl" target="_blank" @click.stop> · {{ suggestion.shareurl.replace(/^https?:\/\/pan\.(quark|qoark)\.cn\/s\//, '').split('#')[0] }}</a>
                                 <template v-if="suggestion.source"><span class="source-badge" :class="suggestion.source.toLowerCase()" :data-publish-date="suggestion.publish_date ? ' · ' + formatPublishDate(suggestion.publish_date, suggestion.pansou_source, suggestion.source) : ''">{{ suggestion.source }}</span></template>
+                                <span v-if="getSuggestionSize(suggestion) > 0" class="suggestion-size">{{ getSuggestionSize(suggestion) | size }}</span>
                               </small>
                             </div>
                           </div>
@@ -2950,6 +2951,7 @@
                           <small class="text-muted">
                             <a :href="suggestion.shareurl" target="_blank" @click.stop> · {{ suggestion.shareurl.replace(/^https?:\/\/pan\.(quark|qoark)\.cn\/s\//, '').split('#')[0] }}</a>
                             <template v-if="suggestion.source"><span class="source-badge" :class="suggestion.source.toLowerCase()" :data-publish-date="suggestion.publish_date ? ' · ' + formatPublishDate(suggestion.publish_date, suggestion.pansou_source, suggestion.source) : ''">{{ suggestion.source }}</span></template>
+                            <span v-if="getSuggestionSize(suggestion) > 0" class="suggestion-size">{{ getSuggestionSize(suggestion) | size }}</span>
                           </small>
                         </div>
                       </div>
@@ -11740,6 +11742,87 @@
             });
           }
         },
+        getSuggestionSize(suggestion) {
+          if (!suggestion) return 0;
+          const raw = suggestion.share_total_size != null
+            ? suggestion.share_total_size
+            : (suggestion.total_size != null ? suggestion.total_size : suggestion.size_hint);
+          const size = parseFloat(raw);
+          return Number.isFinite(size) && size > 0 ? size : 0;
+        },
+        getSuggestionTime(suggestion) {
+          if (!suggestion) return 0;
+          return this.parsePublishTs(suggestion.publish_date, suggestion.source, suggestion.pansou_source) || 0;
+        },
+        // 搜索结果排序：体积最大的前 3 条置顶，其余按发布时间降序。
+        // 全部没有大小时保持按时间降序，避免把未算出体积的结果随机顶到前面。
+        sortSuggestionsBySizeAndTime(list) {
+          if (!list || !list.length) return [];
+          const byTime = [...list].sort((a, b) => this.getSuggestionTime(b) - this.getSuggestionTime(a));
+          if (!byTime.some(item => this.getSuggestionSize(item) > 0)) {
+            return byTime;
+          }
+          const bySize = [...byTime].sort((a, b) => this.getSuggestionSize(b) - this.getSuggestionSize(a));
+          const top = bySize.slice(0, Math.min(3, bySize.length));
+          const topSet = new Set(top);
+          const rest = byTime.filter(item => !topSet.has(item));
+          return [...top, ...rest];
+        },
+        toIntSize(value) {
+          const n = parseFloat(value);
+          return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+        },
+        calcShareListSize(shareData) {
+          const list = (shareData && shareData.list) || [];
+          return list.reduce((sum, file) => {
+            if (!file) return sum;
+            const raw = file.size != null ? file.size : file.file_size;
+            return sum + this.toIntSize(raw);
+          }, 0);
+        },
+        parseSizeFromContent(content) {
+          if (!content) return 0;
+          const normalized = String(content).replace(/：/g, ':').replace(/，/g, ',');
+          let match = normalized.match(/大小\s*:\s*(-|[^\s,]+)/i);
+          let text = '';
+          if (match && match[1].trim() !== '-') {
+            text = match[1].trim().toUpperCase();
+          } else {
+            match = normalized.match(/(\d+(?:\.\d+)?)\s*(TB|GB|MB|KB|G|M|K|T)\b/i);
+            if (!match) return 0;
+            text = `${match[1]}${match[2].toUpperCase()}`;
+          }
+          const unitMap = {
+            B: 1, K: 1024, KB: 1024, M: 1048576, MB: 1048576,
+            G: 1073741824, GB: 1073741824, T: 1099511627776, TB: 1099511627776
+          };
+          const parsed = text.match(/^([\d.]+)\s*([A-Z]+)?$/);
+          if (!parsed) return 0;
+          const num = parseFloat(parsed[1]);
+          const multiplier = unitMap[parsed[2] || 'B'];
+          return multiplier ? Math.floor(num * multiplier) : 0;
+        },
+        parseSizeFromTexts(...texts) {
+          for (const text of texts) {
+            const size = this.parseSizeFromContent(text);
+            if (size > 0) return size;
+          }
+          return 0;
+        },
+        // 优先用分享页汇总大小，其次累加当前列表，最后从标题/简介里的「大小:1.5GB」解析
+        resolveSuggestionTotalSize(link, shareDetail) {
+          const apiSize = shareDetail && typeof shareDetail.share_total_size === 'number'
+            ? shareDetail.share_total_size
+            : 0;
+          if (apiSize > 0) return apiSize;
+          const summed = this.calcShareListSize(shareDetail);
+          if (summed > 0) return summed;
+          return this.parseSizeFromTexts(
+            link && link.taskname,
+            link && link.content,
+            link && link.size_hint
+          );
+        },
         searchSuggestions(index, taskname, deep = 1) {
           if (taskname.length < 2) {
             return;
@@ -11829,9 +11912,6 @@
           // 批量处理的大小，每批次最多处理5个链接
           const batchSize = 5;
           
-          // 解析时间用于排序（降序：最新在前）
-          const getItemTs = (item) => this.parsePublishTs(item && item.publish_date, item && item.source, item && item.pansou_source);
-          
           // 处理单个链接的函数
           const processLink = (link) => {
             return new Promise((resolve) => {
@@ -11865,9 +11945,7 @@
                     }
                     const enriched = { ...link };
                     enriched.share_author_name = this.extractShareAuthorName(shareDetail);
-                    if (typeof shareDetail.share_total_size === 'number') {
-                      enriched.share_total_size = shareDetail.share_total_size;
-                    }
+                    enriched.share_total_size = this.resolveSuggestionTotalSize(link, shareDetail);
                     // 屏蔽分享者：匹配昵称的资源不进入结果列表
                     if (this.isBlockedSharerByName(enriched.share_author_name)) {
                       resolve(null);
@@ -11889,6 +11967,9 @@
                     const enriched = { ...link };
                     if (response.data.data) {
                       enriched.share_author_name = this.extractShareAuthorName(response.data.data);
+                      enriched.share_total_size = this.resolveSuggestionTotalSize(link, response.data.data);
+                    } else {
+                      enriched.share_total_size = this.parseSizeFromTexts(link.taskname, link.content, link.size_hint);
                     }
                     if (this.isBlockedSharerByName(enriched.share_author_name)) {
                       resolve(null);
@@ -11909,7 +11990,10 @@
                 this.smart_param.validateProgress.current++;
                 this.smart_param.validateProgress.valid++;
                 
-                resolve({ ...link });
+                resolve({
+                  ...link,
+                  share_total_size: this.parseSizeFromTexts(link.taskname, link.content, link.size_hint)
+                });
               });
             });
           };
@@ -11936,9 +12020,10 @@
               }
             });
             
-            // 动态排序（按发布时间/日期降序）
-            validResults.sort((a, b) => getItemTs(b) - getItemTs(a));
-            const visibleResults = this.filterBlockedSharersFromResults(validResults);
+            // 体积最大的前 3 条置顶，其余按发布时间降序
+            const visibleResults = this.sortSuggestionsBySizeAndTime(
+              this.filterBlockedSharersFromResults(validResults)
+            );
             
             // 每批次都增量更新到界面，显示当前有效数量并保持正在验证状态
             if (sessionId !== this.smart_param.searchSessionId || !this.smart_param.validating) return; // 渲染前再次检查会话
@@ -11986,10 +12071,10 @@
           // 清除快速显示标记
           this.smart_param._hasShownInterimResults = false;
           
-          // 结束前做一次排序，确保最终顺序正确
-          const getItemTs = (item) => this.parsePublishTs(item && item.publish_date, item && item.source, item && item.pansou_source);
-          validResults.sort((a, b) => getItemTs(b) - getItemTs(a));
-          const visibleResults = this.filterBlockedSharersFromResults(validResults);
+          // 搜索完成后：体积最大的前 3 条置顶，其余按发布时间降序
+          const visibleResults = this.sortSuggestionsBySizeAndTime(
+            this.filterBlockedSharersFromResults(validResults)
+          );
           
           // 更新搜索结果
           let message = visibleResults.length === 0 ? "未找到有效的分享链接" : searchData.message;

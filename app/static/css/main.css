@@ -7247,6 +7247,21 @@ div:has(> .collapse:not(.show)):has(+ .row.title[title^="资源搜索"]) {
   vertical-align: baseline;
 }
 
+.suggestion-size {
+  display: inline;
+  margin-left: 0;
+  font-size: 14px;
+  line-height: 1.2;
+  white-space: nowrap;
+  vertical-align: baseline;
+  color: var(--light-text-color);
+}
+
+.suggestion-size::before {
+  content: " · ";
+  color: var(--light-text-color);
+}
+
 /* --------------- 追剧日历样式 --------------- */
 /* 日历分类按钮样式 */
 .calendar-category-buttons {
