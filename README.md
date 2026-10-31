@@ -165,15 +165,17 @@ docker run -d \
   -v /自定义配置文件的存储目录/quark-auto-save-x/config:/app/config \
   -v /自定义生成文件的存储目录:/media \  # 可选，插件 alist_strm_gen 生成 strm 使用
   --restart unless-stopped \
-  x1ao4/quark-auto-save-x:latest
+  ghcr.io/yccci/quark-auto-save-x:latest
 ```
+
+镜像发布在 GitHub Container Registry（`ghcr.io/yccci/quark-auto-save-x`）。推送到 `x` 分支会更新 `latest`，推送 `v*` tag 会发布对应版本并自动创建 GitHub Release。首次发布后如果拉不到镜像，到仓库 Packages 里把该容器包设为 Public。
 
 #### Docker Compose
 
 ```yaml
 services:
   quark-auto-save-x:
-    image: x1ao4/quark-auto-save-x:latest
+    image: ghcr.io/yccci/quark-auto-save-x:latest
     container_name: quark-auto-save-x
     ports:
       - 5005:5005

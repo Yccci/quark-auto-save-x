@@ -1,6 +1,12 @@
 # 使用官方 Python 镜像作为基础镜像
 FROM python:3.13-alpine
 
+#构建版本
+ARG BUILD_SHA
+ARG BUILD_TAG
+ENV BUILD_SHA=$BUILD_SHA
+ENV BUILD_TAG=$BUILD_TAG
+
 # 设置工作目录
 WORKDIR /app
 
@@ -12,13 +18,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 时区
 ENV TZ="Asia/Shanghai"
-
-#构建版本
-ARG VERSION
-ARG BUILD_SHA
-ARG BUILD_TAG=v${VERSION}
-ENV BUILD_SHA=$BUILD_SHA
-ENV BUILD_TAG=$BUILD_TAG
 
 # 端口配置 (可通过 -e PORT=xxxx 修改，适用于桥接模式和host模式)
 ENV PORT=5005
