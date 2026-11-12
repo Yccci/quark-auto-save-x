@@ -1284,53 +1284,9 @@ def remove_file_icons(filename):
 
     return clean_name
 
-# 定义一个函数来检测字幕文件并应用语言代码后缀
 def apply_subtitle_naming_rule(filename, task_settings):
-    """
-    检测字幕文件并应用语言代码后缀
-    
-    Args:
-        filename: 原始文件名
-        task_settings: 任务设置，包含字幕命名规则配置
-    
-    Returns:
-        处理后的文件名
-    """
-    # 从任务设置中获取字幕命名规则配置
-    subtitle_add_language_code = task_settings.get("subtitle_add_language_code", False)
-    subtitle_naming_rule = task_settings.get("subtitle_naming_rule", "zh")
-    
-    # 如果任务设置中没有配置，尝试从全局配置中获取
-    if not subtitle_add_language_code:
-        try:
-            if 'CONFIG_DATA' in globals() and CONFIG_DATA:
-                global_task_settings = CONFIG_DATA.get("task_settings", {})
-                subtitle_add_language_code = global_task_settings.get("subtitle_add_language_code", False)
-                subtitle_naming_rule = global_task_settings.get("subtitle_naming_rule", "zh")
-        except (KeyError, AttributeError, TypeError):
-            # 配置获取失败，使用默认值
-            pass
-    
-    # 检查是否启用了字幕命名规则
-    if not subtitle_add_language_code or not subtitle_naming_rule:
-        return filename
-    
-    # 检测是否为字幕文件
-    lower_name = filename.lower()
-    subtitle_extensions = ['.srt', '.ass', '.ssa', '.vtt', '.sup']
-    
-    if not any(lower_name.endswith(ext) for ext in subtitle_extensions):
-        return filename
-    
-    # 分离文件名和扩展名
-    name_without_ext, ext = os.path.splitext(filename)
-    
-    # 检查是否已经包含语言代码后缀，避免重复添加
-    if f".{subtitle_naming_rule}" in name_without_ext:
-        return filename
-    
-    # 添加语言代码后缀
-    return f"{name_without_ext}.{subtitle_naming_rule}{ext}"
+    """字幕命名规则已移除，文件名保持原样。"""
+    return filename
 
 
 # 已知文件格式扩展名（小写），用于识别命名规则末尾是否指定了文件扩展名

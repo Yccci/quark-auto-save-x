@@ -730,7 +730,7 @@
             </div>
 
             <!-- 剧集识别模块 -->
-            <div class="row title" title="配置剧集编号与电视任务的识别规则，用于剧集命名的集编号提取和编辑任务时的智能填充判定，留空使用内置默认规则，或添加自定义规则作为补充，查阅Wiki了解详情">
+            <div class="row title" title="配置文件名中的集编号识别规则，留空使用内置默认规则，或添加自定义规则作为补充，查阅Wiki了解详情">
               <div class="col">
                 <h2 style="display: inline-block; font-size: 1.5rem;">剧集识别</h2>
                 <span class="badge badge-pill badge-light">
@@ -746,17 +746,9 @@
                 <input type="text" class="form-control" v-model="episodePatternsText" placeholder="留空使用内置默认规则，或输入自定义正则表达式作为补充，多个表达式用竖线分隔，特殊符号需要转义" title="设置文件名中的集编号识别（提取）规则，留空时仅使用内置规则，填写后会作为补充规则参与识别，多个表达式用竖线分隔，特殊符号请转义">
               </div>
             </div>
-            <div class="form-group">
-              <div class="input-group">
-                <div class="input-group-prepend">
-                  <span class="input-group-text">电视任务识别关键词</span>
-                </div>
-                <input type="text" class="form-control" v-model="tvShowKeywordsText" placeholder="留空使用内置默认关键词，或输入自定义关键词作为补充，多个关键词用竖线分隔" title="设置电视任务识别关键词，留空时仅使用内置关键词，填写后会追加到内置关键词中共同匹配保存路径，多个关键词用竖线分隔，保存路径包含关键词的任务将被判定为电视任务，并应用电视节目智能填充规则，在编辑任务时自动填充或同步配置">
-              </div>
-            </div>
 
             <!-- 任务设置模块 -->
-            <div class="row title" title="配置影视发现页面创建任务时的智能填充规则，请使用你的网盘目录替换默认的目录前缀，否则将自动继承任务列表最后一个任务的保存路径，查阅Wiki了解详情">
+            <div class="row title" title="配置保存路径预设。每个预设包含关键字和路径，可增删。在任务列表的保存路径后选择关键字，会按「预设路径/任务名称」填充，不会从任务名称识别类型或季数">
               <div class="col">
                 <h2 style="display: inline-block; font-size: 1.5rem;">任务设置</h2>
                 <span class="badge badge-pill badge-light">
@@ -765,85 +757,22 @@
               </div>
             </div>
 
-            <div class="form-group">
-              <div class="input-group">
-                <div class="input-group-prepend">
-                  <span class="input-group-text">电影保存路径</span>
-                </div>
-                <input type="text" class="form-control" v-model="formData.task_settings.movie_save_path" placeholder="电影目录前缀/片名 (年份)" title="设置电影类型内容的默认保存路径格式，在影视发现页面创建电影任务时自动填充。支持变量：片名、年份">
-              </div>
+            <div v-if="!formData.task_settings.save_path_presets || formData.task_settings.save_path_presets.length === 0" class="form-group">
+              <button type="button" class="btn btn-outline-primary" @click="addSavePathPreset">添加路径预设</button>
             </div>
-
-            <div class="form-group">
+            <div v-for="(preset, presetIndex) in formData.task_settings.save_path_presets" :key="'save-path-preset-' + presetIndex" class="form-group mb-2">
               <div class="input-group">
                 <div class="input-group-prepend">
-                  <span class="input-group-text">剧集保存路径</span>
+                  <span class="input-group-text">关键字</span>
                 </div>
-                <input type="text" class="form-control" v-model="formData.task_settings.tv_save_path" placeholder="剧集目录前缀/剧名 (年份)/剧名 - S季数" title="设置剧集类型内容（和电视任务智能填充）的默认保存路径格式，在影视发现（和任务列表）页面创建剧集（和电视）任务时自动填充。支持变量：剧名、年份、季数">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <div class="input-group">
+                <input type="text" class="form-control" v-model="preset.keyword" placeholder="如：电影、剧集" title="预设关键字，显示在任务保存路径后的下拉框中">
                 <div class="input-group-prepend">
-                  <span class="input-group-text">动画保存路径</span>
+                  <span class="input-group-text">保存路径</span>
                 </div>
-                <input type="text" class="form-control" v-model="formData.task_settings.anime_save_path" placeholder="动画目录前缀/剧名 (年份)/剧名 - S季数" title="设置动画类型内容的默认保存路径格式，在影视发现页面创建动画任务时自动填充。支持变量：剧名、年份、季数">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <div class="input-group">
-                <div class="input-group-prepend">
-                  <span class="input-group-text">综艺保存路径</span>
-                </div>
-                <input type="text" class="form-control" v-model="formData.task_settings.variety_save_path" placeholder="综艺目录前缀/剧名 (年份)/剧名 - S季数" title="设置综艺类型内容的默认保存路径格式，在影视发现页面创建综艺任务时自动填充。支持变量：剧名、年份、季数">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <div class="input-group">
-                <div class="input-group-prepend">
-                  <span class="input-group-text">纪录片保存路径</span>
-                </div>
-                <input type="text" class="form-control" v-model="formData.task_settings.documentary_save_path" placeholder="纪录片目录前缀/剧名 (年份)/剧名 - S季数" title="设置纪录片类型内容的默认保存路径格式，在影视发现页面创建纪录片任务时自动填充。支持变量：剧名、年份、季数">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <div class="input-group">
-                <div class="input-group-prepend">
-                  <span class="input-group-text">电影命名规则</span>
-                </div>
-                <input type="text" class="form-control" v-model="formData.task_settings.movie_naming_pattern" placeholder="^(.*)\.([^.]+)" title="设置电影类型内容的默认文件命名规则的匹配表达式，在影视发现页面创建电影任务时自动填充">
-                <input type="text" class="form-control" v-model="formData.task_settings.movie_naming_replace" placeholder="片名 (年份).\2" title="设置电影类型内容的默认文件命名规则的替换表达式，在影视发现页面创建电影任务时自动填充。支持变量：片名、年份">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <div class="input-group">
-                <div class="input-group-prepend">
-                  <span class="input-group-text">电视命名规则</span>
-                </div>
-                <input type="text" class="form-control" v-model="formData.task_settings.tv_naming_rule" placeholder="剧名 - S季数E[]" title="设置电视类型内容（和电视任务智能填充）的默认文件命名规则，在影视发现（和任务列表）页面创建电视任务时自动填充。支持变量：剧名、季数，[]表示集数占位符">
-                <div class="input-group-append" title="保存时只比较文件名的部分，01.mp4和01.mkv视同为同一文件，不重复转存">
-                  <div class="input-group-text">
-                    <input type="checkbox" v-model="formData.task_settings.tv_ignore_extension">&nbsp;忽略后缀
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <div class="input-group">
-                <div class="input-group-prepend">
-                  <span class="input-group-text">字幕命名规则</span>
-                </div>
-                <input type="text" class="form-control" v-model="formData.task_settings.subtitle_naming_rule" placeholder="zh" title="设置字幕文件的语言代码，在重命名字幕文件时会在文件名末尾添加此代码">
-                <div class="input-group-append" title="启用后，重命名字幕文件时会在文件名末尾添加语言代码后缀">
-                  <div class="input-group-text">
-                    <input type="checkbox" v-model="formData.task_settings.subtitle_add_language_code">&nbsp;添加语言代码
-                  </div>
+                <input type="text" class="form-control" v-model="preset.path" placeholder="目录前缀，选择后会在后面加上任务名称" title="选择该关键字后，保存路径填充为「此路径/任务名称」">
+                <div class="input-group-append">
+                  <button v-if="presetIndex === formData.task_settings.save_path_presets.length - 1" type="button" class="btn btn-outline-primary" @click="addSavePathPreset" title="添加预设"><i class="bi bi-plus-lg"></i></button>
+                  <button type="button" class="btn btn-outline-danger" @click="removeSavePathPreset(presetIndex)" title="删除预设"><i class="bi bi-dash-lg"></i></button>
                 </div>
               </div>
             </div>
@@ -1406,6 +1335,10 @@
                     <div class="col-sm-10">
                       <div class="input-group">
                         <input type="text" name="savepath[]" class="form-control" v-model="task.savepath" placeholder="必填" @focus="focusTaskname(task.__originalIndex !== undefined ? task.__originalIndex : index, task)" @input="onSavepathChange(task.__originalIndex !== undefined ? task.__originalIndex : index, task)">
+                        <select v-if="savePathPresetOptions.length" class="form-control save-path-preset-select" title="选择预设关键字，按对应路径和任务名称填充保存路径" @change="applySavePathPreset(task, $event)">
+                          <option value="">预设</option>
+                          <option v-for="preset in savePathPresetOptions" :key="preset.keyword" :value="preset.keyword">{{ preset.keyword }}</option>
+                        </select>
                         <div class="input-group-append">
                           <button class="btn btn-outline-secondary" type="button" v-if="smart_param.savepath && smart_param.index == (task.__originalIndex !== undefined ? task.__originalIndex : index) && task.savepath != smart_param.origin_savepath" @click="task.savepath = smart_param.origin_savepath" title="恢复保存路径"><i class="bi bi-reply"></i></button>
                           <button class="btn btn-outline-secondary" type="button" @click="showSavepathSelect(task.__originalIndex !== undefined ? task.__originalIndex : index)" title="选择保存到的文件夹"><i class="bi bi-folder"></i></button>
@@ -2993,6 +2926,10 @@
                 <div class="col-sm-10">
                   <div class="input-group">
                     <input type="text" name="savepath[]" class="form-control" v-model="createTask.taskData.savepath" placeholder="必填" @focus="focusTaskname(-1, createTask.taskData)" @input="onSavepathChange(-1, createTask.taskData)">
+                    <select v-if="savePathPresetOptions.length" class="form-control save-path-preset-select" title="选择预设关键字，按对应路径和任务名称填充保存路径" @change="applySavePathPreset(createTask.taskData, $event)">
+                      <option value="">预设</option>
+                      <option v-for="preset in savePathPresetOptions" :key="'create-' + preset.keyword" :value="preset.keyword">{{ preset.keyword }}</option>
+                    </select>
                     <div class="input-group-append">
                       <button class="btn btn-outline-secondary" type="button" v-if="smart_param.savepath && smart_param.index == -1 && createTask.taskData.savepath != smart_param.origin_savepath" @click="createTask.taskData.savepath = smart_param.origin_savepath" title="恢复保存路径"><i class="bi bi-reply"></i></button>
                       <button class="btn btn-outline-secondary" type="button" @click="showSavepathSelect(-1)" title="选择保存到的文件夹"><i class="bi bi-folder"></i></button>
@@ -3348,19 +3285,14 @@
           tasklist: [],
           magic_regex: {},
           episode_patterns: [],
-          tv_show_keywords: [],
           task_settings: {
-            movie_save_path: "电影目录前缀/片名 (年份)",
-            tv_save_path: "剧集目录前缀/剧名 (年份)/剧名 - S季数",
-            anime_save_path: "动画目录前缀/剧名 (年份)/剧名 - S季数",
-            variety_save_path: "综艺目录前缀/剧名 (年份)/剧名 - S季数",
-            documentary_save_path: "纪录片目录前缀/剧名 (年份)/剧名 - S季数",
-            movie_naming_pattern: "^(.*)\\.([^.]+)",
-            movie_naming_replace: "片名 (年份).\\2",
-            tv_naming_rule: "剧名 - S季数E[]",
-            tv_ignore_extension: true,
-            subtitle_naming_rule: "zh",
-            subtitle_add_language_code: false,
+            save_path_presets: [
+              { keyword: "电影", path: "电影目录前缀" },
+              { keyword: "剧集", path: "剧集目录前缀" },
+              { keyword: "动画", path: "动画目录前缀" },
+              { keyword: "综艺", path: "综艺目录前缀" },
+              { keyword: "纪录片", path: "纪录片目录前缀" }
+            ],
             search_preferred_sharers: "",
             search_blocked_sharers: ""
           },
@@ -3916,19 +3848,8 @@
             this.formData.episode_patterns = patterns.map(regex => ({ regex }));
           }
         },
-        tvShowKeywordsText: {
-          get() {
-            if (!this.formData.tv_show_keywords || !Array.isArray(this.formData.tv_show_keywords)) return '';
-            return this.formData.tv_show_keywords.join('|');
-          },
-          set(value) {
-            if (!value || value.trim() === '') {
-              this.formData.tv_show_keywords = [];
-              return;
-            }
-            const keywords = value.split('|').map(item => item.trim()).filter(item => item !== '');
-            this.formData.tv_show_keywords = [...new Set(keywords)];
-          }
+        savePathPresetOptions() {
+          return this.getSavePathPresets().filter(preset => preset.keyword);
         },
         // 管理视图：按任务名（拼音）排序并应用顶部筛选
         managementTasksFiltered() {
@@ -9537,49 +9458,7 @@
               if (!config_data.episode_patterns) {
                 config_data.episode_patterns = [];
               }
-              // 确保电视节目任务识别关键词存在
-              if (!Array.isArray(config_data.tv_show_keywords)) {
-                config_data.tv_show_keywords = [];
-              }
-              // 确保任务设置存在
-              if (!config_data.task_settings) {
-                config_data.task_settings = {
-                  movie_save_path: "电影目录前缀/片名 (年份)",
-                  tv_save_path: "剧集目录前缀/剧名 (年份)/剧名 - S季数",
-                  anime_save_path: "动画目录前缀/剧名 (年份)/剧名 - S季数",
-                  variety_save_path: "综艺目录前缀/剧名 (年份)/剧名 - S季数",
-                  documentary_save_path: "纪录片目录前缀/剧名 (年份)/剧名 - S季数",
-                  movie_naming_pattern: "^(.*)\\.([^.]+)",
-                  movie_naming_replace: "片名 (年份).\\2",
-                  tv_naming_rule: "剧名 - S季数E[]",
-                  tv_ignore_extension: true,
-                  subtitle_naming_rule: "zh",
-                  subtitle_add_language_code: false,
-                  search_preferred_sharers: "",
-                  search_blocked_sharers: "",
-                  auto_search_resources: "enabled",
-                  auto_search_resources_on_edit: "enabled",
-                  auto_extract_archive: "disabled"
-                };
-              }
-              // 确保电影命名规则字段存在，只在字段不存在时设置默认值，允许用户设置为空字符串
-              if (config_data.task_settings.movie_naming_pattern === undefined) {
-                config_data.task_settings.movie_naming_pattern = "^(.*)\\.([^.]+)";
-              }
-              if (config_data.task_settings.movie_naming_replace === undefined) {
-                config_data.task_settings.movie_naming_replace = "片名 (年份).\\2";
-              }
-              // 确保电视忽略后缀设置存在
-              if (config_data.task_settings.tv_ignore_extension === undefined) {
-                config_data.task_settings.tv_ignore_extension = true;
-              }
-              // 为字幕命名规则添加默认值（向后兼容）
-              if (config_data.task_settings.subtitle_naming_rule === undefined) {
-                config_data.task_settings.subtitle_naming_rule = "zh";
-              }
-              if (config_data.task_settings.subtitle_add_language_code === undefined) {
-                config_data.task_settings.subtitle_add_language_code = false;
-              }
+              this.normalizeTaskSettings(config_data.task_settings || (config_data.task_settings = {}));
               if (config_data.task_settings.search_preferred_sharers === undefined) {
                 config_data.task_settings.search_preferred_sharers = "";
               }
@@ -10414,6 +10293,95 @@
           return generatedRule;
         },
 
+        defaultSavePathPresets() {
+          return [
+            { keyword: "电影", path: "电影目录前缀" },
+            { keyword: "剧集", path: "剧集目录前缀" },
+            { keyword: "动画", path: "动画目录前缀" },
+            { keyword: "综艺", path: "综艺目录前缀" },
+            { keyword: "纪录片", path: "纪录片目录前缀" }
+          ];
+        },
+        legacySavePathToPrefix(value, fallback) {
+          const text = (value || "").trim();
+          if (!text) return fallback;
+          const parts = text.split("/");
+          const kept = [];
+          for (const part of parts) {
+            if (/(剧名|片名|年份|季数|\[\]|\{\})/.test(part)) break;
+            kept.push(part);
+          }
+          const prefix = kept.join("/").trim();
+          return prefix || fallback;
+        },
+        normalizeTaskSettings(taskSettings) {
+          if (!taskSettings || typeof taskSettings !== "object") return;
+          const legacyKeys = [
+            "movie_save_path", "tv_save_path", "anime_save_path", "variety_save_path", "documentary_save_path",
+            "movie_naming_pattern", "movie_naming_replace", "tv_naming_rule", "tv_ignore_extension",
+            "subtitle_naming_rule", "subtitle_add_language_code"
+          ];
+          const legacyMap = [
+            { keyword: "电影", key: "movie_save_path", fallback: "电影目录前缀" },
+            { keyword: "剧集", key: "tv_save_path", fallback: "剧集目录前缀" },
+            { keyword: "动画", key: "anime_save_path", fallback: "动画目录前缀" },
+            { keyword: "综艺", key: "variety_save_path", fallback: "综艺目录前缀" },
+            { keyword: "纪录片", key: "documentary_save_path", fallback: "纪录片目录前缀" }
+          ];
+          if (!Array.isArray(taskSettings.save_path_presets)) {
+            const hasLegacy = legacyMap.some(item => Object.prototype.hasOwnProperty.call(taskSettings, item.key));
+            taskSettings.save_path_presets = hasLegacy
+              ? legacyMap.map(item => ({
+                  keyword: item.keyword,
+                  path: this.legacySavePathToPrefix(taskSettings[item.key], item.fallback)
+                }))
+              : this.defaultSavePathPresets();
+          } else {
+            taskSettings.save_path_presets = taskSettings.save_path_presets
+              .filter(item => item && typeof item === "object")
+              .map(item => ({
+                keyword: String(item.keyword || "").trim(),
+                path: String(item.path || "").trim()
+              }));
+          }
+          legacyKeys.forEach(key => { delete taskSettings[key]; });
+        },
+        getSavePathPresets() {
+          const settings = (this.formData && this.formData.task_settings) || {};
+          return Array.isArray(settings.save_path_presets) ? settings.save_path_presets : [];
+        },
+        findSavePathPreset(keyword) {
+          const name = (keyword || "").trim();
+          if (!name) return null;
+          return this.getSavePathPresets().find(item => (item.keyword || "").trim() === name) || null;
+        },
+        buildSavePathFromPreset(preset, taskName) {
+          if (!preset) return "";
+          const base = String(preset.path || "").trim().replace(/\/+$/, "");
+          const name = String(taskName || "").trim().replace(/^\/+|\/+$/g, "");
+          if (base && name) return `${base}/${name}`;
+          return base || name;
+        },
+        addSavePathPreset() {
+          if (!this.formData.task_settings) this.$set(this.formData, "task_settings", {});
+          if (!Array.isArray(this.formData.task_settings.save_path_presets)) {
+            this.$set(this.formData.task_settings, "save_path_presets", []);
+          }
+          this.formData.task_settings.save_path_presets.push({ keyword: "", path: "" });
+        },
+        removeSavePathPreset(index) {
+          const list = this.formData.task_settings && this.formData.task_settings.save_path_presets;
+          if (!Array.isArray(list)) return;
+          list.splice(index, 1);
+        },
+        applySavePathPreset(task, event) {
+          const keyword = event && event.target ? event.target.value : "";
+          if (event && event.target) event.target.value = "";
+          if (!task || !keyword) return;
+          const preset = this.findSavePathPreset(keyword);
+          if (!preset) return;
+          task.savepath = this.buildSavePathFromPreset(preset, task.taskname);
+        },
         changeTaskname(index, task) {
           if (this.smart_param.searchTimer) {
             clearTimeout(this.smart_param.searchTimer);
@@ -10428,314 +10396,8 @@
             }
           }, 1000);
 
-          // 添加防抖机制，避免频繁的中间状态触发同步
-          if (this.smart_param.syncTimer) {
-            clearTimeout(this.smart_param.syncTimer);
-          }
-          this.smart_param.syncTimer = setTimeout(() => {
-            this.performTasknameSync(index, task);
-          }, 300); // 300ms 防抖延迟
         },
 
-        performTasknameSync(index, task) {
-          // 重新计算智能路径参数
-          this.smart_param.index = index;
-          this.smart_param.origin_savepath = task.savepath;
-          const regex = new RegExp(`/${task.taskname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(/|$)`);
-          if (task.savepath && task.savepath.includes('TASKNAME')) {
-            this.smart_param.savepath = task.savepath;
-          } else if (task.savepath && task.savepath.match(regex)) {
-            this.smart_param.savepath = task.savepath.replace(task.taskname, 'TASKNAME');
-          } else {
-            this.smart_param.savepath = undefined;
-          }
-
-          // 清理任务名称中的连续空格和特殊符号
-          const cleanTaskName = task.taskname.replace(/\s+/g, ' ').trim();
-
-          // 检测是否是不完整的季数格式（如 S0, S, - S 等），如果是则不处理
-          const incompleteSeasonPattern = /[\s\.\-_]+S\d{0,1}$/i;
-          if (incompleteSeasonPattern.test(cleanTaskName)) {
-            return; // 不处理不完整的季数格式
-          }
-          
-          // 提取任务名称中的分隔符格式
-          // 使用与cleanTaskNameForSearch相同的季数格式匹配模式
-          let showName, seasonNumber, nameSeparator = ' - '; // 默认分隔符
-          let isTVShow = false; // 标记是否为电视节目
-          let separatorMatch = null;
-          
-          // 匹配常见的季数格式
-          const seasonPatterns = [
-            /^(.*?)([\s\.\-_]+)S(\d+)$/i,  // 黑镜 - S07、折腰.S01、音你而来-S02
-            /^(.*?)([\s\.\-_]+)Season\s*(\d+)$/i,  // 黑镜 - Season 1
-            /^(.*?)(\s+)S(\d+)$/i,  // 快乐的大人 S02
-            /^(.*?)([\s\.\-_]+)S(\d+)E\d+$/i,  // 处理 S01E01 格式
-            /^(.*?)(\s+)第\s*(\d+)\s*季$/i,  // 处理 第N季 格式
-            /^(.*?)([\s\.\-_]+)第\s*(\d+)\s*季$/i,  // 处理 - 第N季 格式
-            /^(.*?)(\s+)第([一二三四五六七八九十零]+)季$/i,  // 处理 第一季、第二季 格式
-            /^(.*?)([\s\.\-_]+)第([一二三四五六七八九十零]+)季$/i,  // 处理 - 第一季、- 第二季 格式
-          ];
-          
-          // 尝试匹配各种格式
-          for (const pattern of seasonPatterns) {
-            const match = cleanTaskName.match(pattern);
-            if (match) {
-              separatorMatch = match;
-              // 根据不同的格式，确定季序号的位置
-              if (match[3] && match[3].match(/[一二三四五六七八九十百千万零两]/)) {
-                // 将中文数字转换为阿拉伯数字
-                const arabicNumber = chineseToArabic(match[3]);
-                seasonNumber = arabicNumber !== null ? String(arabicNumber) : '01';
-              } else {
-                seasonNumber = match[3] || '01';
-              }
-              break;
-            }
-          }
-          
-          // 判断保存路径是否包含电视节目相关的关键词
-          if (task.savepath) {
-            const tvKeywords = this.getTVShowKeywords();
-            isTVShow = tvKeywords.some(keyword => task.savepath.includes(keyword));
-          }
-
-          // 当任务名称包含季信息时，也按电视节目处理
-          const hasSeason = separatorMatch !== null;
-          if (hasSeason) {
-            isTVShow = true;
-          }
-          
-          if (separatorMatch) {
-            // 提取剧名（去除末尾空格和特殊符号）
-            showName = separatorMatch[1].trim().replace(/[\s\.\-_]+$/, '');
-            // 季序号已在上面的循环中提取
-            // 提取实际使用的分隔符
-            const rawSeparator = separatorMatch[2];
-            
-            // 处理特殊情况：如果是"黑镜 - 第五季"这种格式，需要保留完整的" - "分隔符
-            // 检查原始字符串中剧名后面的分隔符
-            const fullSeparator = cleanTaskName.substring(showName.length, cleanTaskName.length - (separatorMatch[3] ? separatorMatch[3].length + 1 : 0)).match(/^([\s\.\-_]+)/);
-            
-            if (fullSeparator && fullSeparator[1]) {
-              // 使用完整的分隔符
-              nameSeparator = fullSeparator[1];
-            } else {
-              // 规范化分隔符（如果是连续的空格，转为单个空格）
-              nameSeparator = rawSeparator.replace(/\s+/g, ' ');
-              // 如果只有一个点号，保留点号
-              if (rawSeparator === '.') {
-                nameSeparator = '.';
-              }
-              // 如果是单个空格，保留单个空格
-              else if (rawSeparator === ' ') {
-                nameSeparator = ' ';
-              }
-            }
-            // 其他情况保持原样
-          } else {
-            // 如果没有匹配到季序号格式，处理删除季数信息的情况
-            showName = cleanTaskName;
-
-            // 检查保存路径中是否已有季数信息，如果有且是电视节目类型，则保留原有季数
-            let preserveExistingSeason = false;
-
-            if (task.savepath && isTVShow) {
-              // 统一季数解析：保持任务名/保存路径/命名规则三方同步
-              const existingSeasonNum = this.resolveTaskSeasonNumber(task, '');
-
-              // 只有当季数是有效的（不是00或空）时才保留
-              if (existingSeasonNum && existingSeasonNum !== '00' && existingSeasonNum !== '0') {
-                seasonNumber = existingSeasonNum;
-                preserveExistingSeason = true;
-
-                // 从保存路径中提取分隔符格式（仅在 Sxx 风格存在时同步分隔符）
-                const pathParts = task.savepath.split('/');
-                if (pathParts.length > 0) {
-                  const lastPart = pathParts[pathParts.length - 1];
-                  const separatorMatch = lastPart.match(/^(.*?)([\s\.\-_]+)S\d+/i);
-                  if (separatorMatch) {
-                    nameSeparator = separatorMatch[2];
-                  }
-                }
-              }
-            }
-
-            // 如果没有保留现有季数，则使用默认值
-            if (!preserveExistingSeason) {
-              seasonNumber = '01';
-            }
-          }
-
-          // 更新保存路径 - 无论是否使用智能路径，都确保倒数第二级目录更新
-          if (task.savepath) {
-            let hasAppliedTvTemplateSavepath = false;
-            // 任务名不含季信息时，优先按用户配置的剧集保存路径模板（前缀后的部分）进行智能填充
-            if (isTVShow && !hasSeason) {
-              const generatedSavepath = this.buildTvSavepathFromTemplate(task.savepath, showName, seasonNumber);
-              if (generatedSavepath) {
-                task.savepath = generatedSavepath;
-                hasAppliedTvTemplateSavepath = true;
-              }
-            }
-
-            if (!hasAppliedTvTemplateSavepath) {
-            // 分割保存路径为各级目录
-            const pathParts = task.savepath.split('/');
-            const protectionDepth = isTVShow ? this.getTvPathProtectionDepth(task.savepath) : 0;
-
-            // 电视任务在保护层级之后至少保留两级可填充目录，不足时自动补齐
-            if (isTVShow && protectionDepth > 0) {
-              while (pathParts.length < protectionDepth + 2) {
-                pathParts.push('');
-              }
-            }
-
-            if (pathParts.length >= 2) {
-              // 如果智能路径已设置，使用原有逻辑更新最后一级
-              if (this.smart_param.savepath) {
-                // 更新最后一级目录，但保留前面的路径结构
-                let replacementName;
-                if (isTVShow) {
-                  // 电视节目格式：剧名 + 分隔符 + S季序号
-                  replacementName = showName + nameSeparator + 'S' + seasonNumber.padStart(2, '0');
-                } else {
-                  // 非电视节目直接使用任务名称
-                  replacementName = cleanTaskName;
-                }
-                const newPath = this.smart_param.savepath.replace('TASKNAME', replacementName);
-                const newPathParts = newPath.split('/');
-                pathParts[pathParts.length - 1] = newPathParts[newPathParts.length - 1];
-              } else {
-                // 根据是否为电视节目决定处理方式
-                if (isTVShow) {
-                  // 电视节目格式：剧名 + 分隔符 + S季序号
-                  const newLastPart = showName + nameSeparator + 'S' + seasonNumber.padStart(2, '0');
-                  pathParts[pathParts.length - 1] = newLastPart;
-                } else {
-                  // 非电视节目直接使用任务名称
-                  pathParts[pathParts.length - 1] = cleanTaskName;
-                }
-              }
-              
-              // 处理倒数第二级目录（剧名+年份）- 无论是否使用智能路径，都更新
-              if (pathParts.length >= 3) {
-                const parentDir = pathParts[pathParts.length - 2];
-                // 检查倒数第二级是否符合 "名称 (年份)" 格式
-                const yearMatch = parentDir.match(/^(.+?)\s*[\(（](\d{4})[\)）]$/);
-
-                if (yearMatch) {
-                  if (isTVShow) {
-                    // 电视节目：更新倒数第二级为新的剧名 + 年份
-                    const year = yearMatch[2];
-                    pathParts[pathParts.length - 2] = showName + ' (' + year + ')';
-                  } else {
-                    // 非电视节目：去除倒数第二级目录
-                    pathParts.splice(pathParts.length - 2, 1);
-                  }
-                } else if (isTVShow) {
-                  // 电视节目：当倒数第二级缺少年份时，自动补全为当年，保证最末两级都能智能填充
-                  const currentYear = new Date().getFullYear();
-                  pathParts[pathParts.length - 2] = showName + ' (' + currentYear + ')';
-                }
-              }
-
-              // 更新保存路径
-              task.savepath = pathParts.join('/');
-            }
-            }
-          }
-          
-          // 额外处理：检查保存路径最末级是否包含中文季序号，如果包含则转换为标准格式
-          if (task.savepath) {
-            const pathParts = task.savepath.split('/');
-            if (pathParts.length > 0) {
-              const lastPart = pathParts[pathParts.length - 1];
-              // 匹配中文季序号格式
-              const chineseSeasonMatch = lastPart.match(/^(.*?)([\s\.\-_]+)第([一二三四五六七八九十百千万零两]+)季$/);
-              if (chineseSeasonMatch) {
-                const showName = chineseSeasonMatch[1].trim();
-                const separator = chineseSeasonMatch[2];
-                const chineseSeason = chineseSeasonMatch[3];
-                
-                // 将中文数字转换为阿拉伯数字
-                const arabicNumber = chineseToArabic(chineseSeason);
-                const seasonNumber = arabicNumber !== null ? String(arabicNumber) : '1';
-                
-                // 更新最末级目录为标准格式
-                pathParts[pathParts.length - 1] = showName + separator + 'S' + seasonNumber.padStart(2, '0');
-                task.savepath = pathParts.join('/');
-              }
-              
-              // 匹配阿拉伯数字季序号格式
-              const arabicSeasonMatch = lastPart.match(/^(.*?)([\s\.\-_]+)第(\d+)季$/);
-              if (arabicSeasonMatch) {
-                const showName = arabicSeasonMatch[1].trim();
-                const separator = arabicSeasonMatch[2];
-                const seasonNumber = arabicSeasonMatch[3];
-                
-                // 更新最末级目录为标准格式
-                pathParts[pathParts.length - 1] = showName + separator + 'S' + seasonNumber.padStart(2, '0');
-                task.savepath = pathParts.join('/');
-              }
-            }
-          }
-          
-          // 更新命名规则 - 始终使用当前任务名称中的信息
-          if (task.pattern) {
-            // 根据是否为电视节目决定处理方式
-            if (isTVShow) {
-              // 任务名未包含季信息时，优先使用任务设置中的电视命名规则模板
-              const shouldUseCustomRuleTemplate = !hasSeason;
-              // 处理剧集命名模式
-              if (task.use_episode_naming) {
-                task.pattern = shouldUseCustomRuleTemplate
-                  ? this.buildTvNamingFromRule(showName, seasonNumber, false)
-                  : (showName + nameSeparator + 'S' + seasonNumber.padStart(2, '0') + 'E[]');
-                task.episode_naming = task.pattern;
-              } 
-              // 处理顺序命名模式
-              else if (task.use_sequence_naming) {
-                task.pattern = shouldUseCustomRuleTemplate
-                  ? this.buildTvNamingFromRule(showName, seasonNumber, true)
-                  : (showName + nameSeparator + 'S' + seasonNumber.padStart(2, '0') + 'E{}');
-                task.sequence_naming = task.pattern;
-              }
-            } else {
-              // 非电视节目，仅在使用剧集或顺序命名时更新
-              if (task.use_episode_naming) {
-                // 如果原模式是纯E[]，直接使用任务名称
-                if (task.pattern.trim() === 'E[]') {
-                  task.pattern = cleanTaskName + 'E[]';
-                } else if (task.pattern.includes('[]')) {
-                  // 尝试保留原有格式，但更新剧名部分
-                  const patternParts = task.pattern.split(/E\[\]/i);
-                  if (patternParts.length > 0) {
-                    task.pattern = cleanTaskName + 'E[]' + (patternParts[1] || '');
-                  } else {
-                    task.pattern = cleanTaskName + 'E[]';
-                  }
-                }
-                task.episode_naming = task.pattern;
-              } else if (task.use_sequence_naming) {
-                // 同样处理顺序命名
-                if (task.pattern.trim() === 'E{}' || task.pattern.trim() === '{}') {
-                  task.pattern = cleanTaskName + 'E{}';
-                } else if (task.pattern.includes('{}')) {
-                  const patternParts = task.pattern.split(/E\{\}/i);
-                  if (patternParts.length > 0) {
-                    task.pattern = cleanTaskName + 'E{}' + (patternParts[1] || '');
-                  } else {
-                    task.pattern = cleanTaskName + 'E{}';
-                  }
-                }
-                task.sequence_naming = task.pattern;
-              }
-            }
-          }
-
-
-        },
         // 从列表移除任务并保存；删除后重拍分享快照，避免索引错位导致 shareurl_subscribed_since 被误刷新
         finalizeTaskRemoval(index) {
           this.formData.tasklist.splice(index, 1);
@@ -17351,13 +17013,7 @@
           return !!(csValid || psValid);
         },
         smartFillTaskData(item, movieData) {
-          // 智能填充任务数据
-          const taskSettings = this.formData.task_settings || {};
-
-          // 获取当前榜单类型
           const selectedMainCategory = this.discovery.selectedMainCategory;
-
-          // 根据主分类确定榜单类型名称
           const categoryNameMap = {
             'movie_hot': '热门电影',
             'movie_latest': '最新电影',
@@ -17368,28 +17024,24 @@
             'tv_variety': '热门综艺',
             'tv_documentary': '热门纪录片'
           };
-
           const currentRanking = categoryNameMap[selectedMainCategory] || '热门电影';
-
-          // 判断是否为电视类内容
-          const isTvContent = currentRanking.includes('剧集') || currentRanking.includes('动画') ||
-                             currentRanking.includes('综艺') || currentRanking.includes('纪录片');
-
-          // 判断当前内容类型
-          let contentType = 'movie'; // 默认为电影
+          let contentType = 'movie';
+          let presetKeyword = '电影';
           if (currentRanking.includes('剧集')) {
             contentType = 'tv';
+            presetKeyword = '剧集';
           } else if (currentRanking.includes('动画')) {
             contentType = 'anime';
+            presetKeyword = '动画';
           } else if (currentRanking.includes('综艺')) {
             contentType = 'variety';
+            presetKeyword = '综艺';
           } else if (currentRanking.includes('纪录片')) {
             contentType = 'documentary';
+            presetKeyword = '纪录片';
           }
 
-          // 设置内容类型到任务数据
           this.createTask.taskData.content_type = contentType;
-          // 确保 calendar_info 结构存在
           if (!this.createTask.taskData.calendar_info) {
             this.createTask.taskData.calendar_info = {};
           }
@@ -17398,500 +17050,29 @@
           }
           this.createTask.taskData.calendar_info.extracted.content_type = contentType;
 
-          // 检查当前内容类型是否使用了自定义设置
-          const isCustomSettings = this.isUsingCustomTaskSettingsForType(taskSettings, contentType);
-
-          if (!isCustomSettings) {
-            // 如果当前类型没有自定义设置，使用原有的继承逻辑
-            this.createTask.taskData.taskname = item.title || "";
-
-            // 继承最后一个任务的配置
-            if (this.formData.tasklist && this.formData.tasklist.length > 0) {
-              const lastTask = this.formData.tasklist[this.formData.tasklist.length - 1];
-              this.createTask.taskData.savepath = lastTask.savepath || "";
-              this.createTask.taskData.pattern = lastTask.pattern || "";
-              this.createTask.taskData.replace = lastTask.replace || "";
-              this.createTask.taskData.use_sequence_naming = lastTask.use_sequence_naming || false;
-              this.createTask.taskData.use_episode_naming = lastTask.use_episode_naming || false;
-              this.createTask.taskData.sequence_naming = lastTask.sequence_naming || "";
-              this.createTask.taskData.episode_naming = lastTask.episode_naming || "";
-            }
-
-            // 但是对于电视类内容，总是应用电视命名规则
-            if (isTvContent) {
-              const title = item.title || "";
-              const tvInfo = this.extractTvInfo(title);
-              // 使用用户设置的电视命名规则，如果没有设置则使用默认值
-              const namingRule = taskSettings.tv_naming_rule && taskSettings.tv_naming_rule.trim() !== ""
-                ? taskSettings.tv_naming_rule
-                : "剧名 - S季数E[]";
-
-              const generatedNamingRule = this.generateTvNamingRule(namingRule, tvInfo.seriesName, tvInfo.season);
-
-              this.createTask.taskData.taskname = tvInfo.seriesName;
-              this.createTask.taskData.use_episode_naming = true;
-              this.createTask.taskData.episode_naming = generatedNamingRule;
-              this.createTask.taskData.pattern = generatedNamingRule; // 同时设置到pattern字段以便模态框显示
-              this.createTask.taskData.ignore_extension = taskSettings.tv_ignore_extension !== undefined ? taskSettings.tv_ignore_extension : true; // 应用电视忽略后缀设置
-            }
-
-            // 设置其他默认值
-            this.createTask.taskData.shareurl = "";
-            this.createTask.taskData.enddate = "";
-            this.createTask.taskData.runweek = [1, 2, 3, 4, 5, 6, 7];
-            this.createTask.taskData.filterwords = "";
-            this.createTask.taskData.startfid = "";
-            this.createTask.taskData.update_subdir = "";
-
-            // 设置默认的插件配置，并应用全局配置
-            if (this.formData.task_plugins_config_default) {
-              this.createTask.taskData.addition = { ...this.formData.task_plugins_config_default };
-              this.applyGlobalPluginConfig(this.createTask.taskData);
-            }
-            return;
-          }
-
-          // 使用自定义设置进行智能填充
-
-          // 提取影片信息
-          const title = item.title || "";
-          const year = movieData.year || "";
-
-          // 获取对应的配置
-          let savePathTemplate = taskSettings.movie_save_path;
-          let namingRule = "";
-          let useEpisodeNaming = false;
-
-          // 根据内容类型获取对应的配置
-          if (contentType === 'tv') {
-            savePathTemplate = taskSettings.tv_save_path;
-            namingRule = taskSettings.tv_naming_rule;
-            useEpisodeNaming = true;
-          } else if (contentType === 'anime') {
-            savePathTemplate = taskSettings.anime_save_path;
-            namingRule = taskSettings.tv_naming_rule;
-            useEpisodeNaming = true;
-          } else if (contentType === 'variety') {
-            savePathTemplate = taskSettings.variety_save_path;
-            namingRule = taskSettings.tv_naming_rule;
-            useEpisodeNaming = true;
-          } else if (contentType === 'documentary') {
-            savePathTemplate = taskSettings.documentary_save_path;
-            namingRule = taskSettings.tv_naming_rule;
-            useEpisodeNaming = true;
-          }
-
-          // 处理电影类型
-          if (contentType === 'movie') {
-            this.createTask.taskData.taskname = title;
-            this.createTask.taskData.savepath = this.generateMovieSavePath(savePathTemplate, title, year);
-
-            // 应用电影命名规则
-            const movieNamingPattern = taskSettings.movie_naming_pattern && taskSettings.movie_naming_pattern.trim() !== ""
-              ? taskSettings.movie_naming_pattern
-              : "";
-            const movieNamingReplace = taskSettings.movie_naming_replace && taskSettings.movie_naming_replace.trim() !== ""
-              ? taskSettings.movie_naming_replace
-              : "";
-
-            if (movieNamingPattern && movieNamingReplace) {
-              // 生成智能填充的替换表达式
-              const generatedReplace = this.generateMovieNamingRule(movieNamingReplace, title, year);
-              this.createTask.taskData.pattern = movieNamingPattern;
-              this.createTask.taskData.replace = generatedReplace;
-            } else {
-              this.createTask.taskData.pattern = "";
-              this.createTask.taskData.replace = "";
-            }
-
-            this.createTask.taskData.use_sequence_naming = false;
-            this.createTask.taskData.use_episode_naming = false;
-            this.createTask.taskData.sequence_naming = "";
-            this.createTask.taskData.episode_naming = "";
-          } else {
-            // 处理电视类型（剧集、动画、综艺、纪录片）
-            const tvInfo = this.extractTvInfo(title);
-            this.createTask.taskData.taskname = tvInfo.seriesName;
-            this.createTask.taskData.savepath = this.generateTvSavePath(savePathTemplate, tvInfo.seriesName, year, tvInfo.season, tvInfo.isFirstSeason);
-            this.createTask.taskData.pattern = "";
-            this.createTask.taskData.replace = "";
-            this.createTask.taskData.use_sequence_naming = false;
-            const generatedNamingRule = this.generateTvNamingRule(namingRule, tvInfo.seriesName, tvInfo.season);
-
-            this.createTask.taskData.use_episode_naming = useEpisodeNaming;
-            this.createTask.taskData.sequence_naming = "";
-            this.createTask.taskData.episode_naming = generatedNamingRule;
-            this.createTask.taskData.pattern = generatedNamingRule; // 同时设置到pattern字段以便模态框显示
-
-            // 只有电视类内容才应用电视忽略后缀设置
-            if (useEpisodeNaming) {
-              this.createTask.taskData.ignore_extension = taskSettings.tv_ignore_extension !== undefined ? taskSettings.tv_ignore_extension : true;
-            } else {
-              // 电影类内容保持默认的false
-              this.createTask.taskData.ignore_extension = false;
-            }
-          }
-
-          // 设置其他默认值
+          const title = (item && item.title) || "";
+          this.createTask.taskData.taskname = title;
+          const preset = this.findSavePathPreset(presetKeyword);
+          this.createTask.taskData.savepath = preset ? this.buildSavePathFromPreset(preset, title) : "";
+          this.createTask.taskData.pattern = "";
+          this.createTask.taskData.replace = "";
+          this.createTask.taskData.use_sequence_naming = false;
+          this.createTask.taskData.use_episode_naming = false;
+          this.createTask.taskData.sequence_naming = "";
+          this.createTask.taskData.episode_naming = "";
           this.createTask.taskData.shareurl = "";
           this.createTask.taskData.enddate = "";
           this.createTask.taskData.runweek = [1, 2, 3, 4, 5, 6, 7];
           this.createTask.taskData.filterwords = "";
           this.createTask.taskData.startfid = "";
           this.createTask.taskData.update_subdir = "";
-
-          // 设置默认的插件配置，并应用全局配置
           if (this.formData.task_plugins_config_default) {
             this.createTask.taskData.addition = { ...this.formData.task_plugins_config_default };
             this.applyGlobalPluginConfig(this.createTask.taskData);
           }
         },
-        isUsingCustomTaskSettingsForType(taskSettings, contentType) {
-          // 检查特定内容类型是否使用了自定义任务设置
-          const defaultSettings = {
-            movie: "电影目录前缀/片名 (年份)",
-            tv: "剧集目录前缀/剧名 (年份)/剧名 - S季数",
-            anime: "动画目录前缀/剧名 (年份)/剧名 - S季数",
-            variety: "综艺目录前缀/剧名 (年份)/剧名 - S季数",
-            documentary: "纪录片目录前缀/剧名 (年份)/剧名 - S季数"
-          };
-
-          const settingKeys = {
-            movie: 'movie_save_path',
-            tv: 'tv_save_path',
-            anime: 'anime_save_path',
-            variety: 'variety_save_path',
-            documentary: 'documentary_save_path'
-          };
-
-          const settingKey = settingKeys[contentType];
-          if (!settingKey) return false;
-
-          const userValue = taskSettings[settingKey] || "";
-          const defaultValue = defaultSettings[contentType];
-
-          // 如果用户设置了非空且与默认值不同的值，则认为是自定义设置
-          return userValue && userValue !== defaultValue;
-        },
-        isUsingCustomTaskSettings(taskSettings) {
-          // 检查是否使用了自定义任务设置（非默认模板）
-          // 注意：电视命名规则总是生效，不参与自定义判断
-          const defaultSettings = {
-            movie_save_path: "电影目录前缀/片名 (年份)",
-            tv_save_path: "剧集目录前缀/剧名 (年份)/剧名 - S季数",
-            anime_save_path: "动画目录前缀/剧名 (年份)/剧名 - S季数",
-            variety_save_path: "综艺目录前缀/剧名 (年份)/剧名 - S季数",
-            documentary_save_path: "纪录片目录前缀/剧名 (年份)/剧名 - S季数"
-            // tv_naming_rule 不参与判断，总是生效
-          };
-
-          // 检查每个设置是否与默认值不同且不为空
-          for (const key in defaultSettings) {
-            const userValue = taskSettings[key] || "";
-            const defaultValue = defaultSettings[key];
-
-            // 如果用户设置了非空且与默认值不同的值，则认为是自定义设置
-            if (userValue && userValue !== defaultValue) {
-              return true;
-            }
-          }
-
-          return false;
-        },
-        extractTvInfo(title) {
-          // 从标题中提取电视剧信息（剧名、季数等）
-          // 复用cleanTaskNameForSearch的逻辑
-          if (!title) return { seriesName: '', season: '01', isFirstSeason: true };
-
-          // 清理任务名称中的连续空格和特殊符号
-          let cleanedName = title.replace(/\u3000/g, ' ').replace(/\t/g, ' ');
-          cleanedName = cleanedName.replace(/\s+/g, ' ').trim();
-
-          // 匹配常见的季数格式（与cleanTaskNameForSearch保持一致）
-          const seasonPatterns = [
-            /^(.*?)[\s\.\-_]+S(\d+)$/i,  // 黑镜 - S07、折腰.S01、音你而来-S02
-            /^(.*?)[\s\.\-_]+Season\s*(\d+)$/i,  // 黑镜 - Season 1
-            /^(.*?)\s+S(\d+)$/i,  // 快乐的大人 S02
-            /^(.*?)[\s\.\-_]+S(\d+)E\d+$/i,  // 处理 S01E01 格式
-            /^(.*?)\s+第\s*(\d+)\s*季$/i,  // 处理 第N季 格式
-            /^(.*?)[\s\.\-_]+第\s*(\d+)\s*季$/i,  // 处理 - 第N季 格式
-            /^(.*?)\s+第([一二三四五六七八九十零]+)季$/i,  // 处理 第一季、第二季 格式
-            /^(.*?)[\s\.\-_]+第([一二三四五六七八九十零]+)季$/i,  // 处理 - 第一季、- 第二季 格式
-          ];
-
-          for (const pattern of seasonPatterns) {
-            const match = cleanedName.match(pattern);
-            if (match) {
-              let seriesName = match[1].trim();
-              // 去除末尾可能残留的分隔符
-              seriesName = seriesName.replace(/[\s\.\-_]+$/, '');
-
-              let seasonNum = match[2];
-              // 处理中文数字
-              if (isNaN(seasonNum)) {
-                const chineseNumbers = {
-                  '一': 1, '二': 2, '三': 3, '四': 4, '五': 5,
-                  '六': 6, '七': 7, '八': 8, '九': 9, '十': 10, '零': 0
-                };
-                seasonNum = chineseNumbers[seasonNum] || 1;
-              }
-              seasonNum = parseInt(seasonNum);
-
-              return {
-                seriesName: seriesName,
-                season: seasonNum.toString().padStart(2, '0'),
-                isFirstSeason: seasonNum === 1
-              };
-            }
-          }
-
-          // 如果没有匹配到季数格式，返回原标题作为剧名，默认第一季
-          return {
-            seriesName: cleanedName,
-            season: '01',
-            isFirstSeason: true
-          };
-        },
-
-        // 加载“今日更新”的本地数据，用于指示当日转存的剧集/任务
-        async loadTodayUpdatesLocal() {
-          try {
-            const res = await axios.get('/api/calendar/today_updates_local');
-            if (res.data && res.data.success) {
-              const items = res.data.data && res.data.data.items ? res.data.data.items : [];
-              const byTask = {};
-              const byShow = {};
-              const makeKey = (it) => {
-                if (it && it.episode_number != null && it.season_number != null) {
-                  const s = String(it.season_number).padStart(2, '0');
-                  const e = String(it.episode_number).padStart(2, '0');
-                  return `S${s}E${e}`;
-                }
-                if (it && it.air_date) {
-                  return `D:${it.air_date}`;
-                }
-                return null;
-              };
-              items.forEach(it => {
-                if (it && it.task_name) byTask[it.task_name] = true;
-                const key = makeKey(it);
-                const sname = (it && it.show_name) ? String(it.show_name).trim() : '';
-                if (sname && key) {
-                  if (!byShow[sname]) byShow[sname] = new Set();
-                  byShow[sname].add(key);
-                }
-              });
-              // 将 Set 序列化为对象数组以便 Vue 响应式
-              const byShowObj = {};
-              Object.keys(byShow).forEach(k => { byShowObj[k] = Array.from(byShow[k]); });
-              this.calendar.todayUpdatesByTaskName = byTask;
-              this.calendar.todayUpdatesByShow = byShowObj;
-            }
-          } catch (e) {
-            // 忽略错误，维持上次数据
-          }
-        },
-
-        // 判断剧集是否属于“今日更新”的已转存集（按剧名 + SxxExx / 日期 匹配）
-        isEpisodeUpdatedToday(episode) {
-          try {
-            if (!episode) return false;
-            const sname = (episode.show_name || '').trim();
-            if (!sname) return false;
-            const list = this.calendar.todayUpdatesByShow && this.calendar.todayUpdatesByShow[sname];
-            if (!list || list.length === 0) return false;
-            // 拆分模式：逐集匹配
-            const makeKey = (ep) => {
-              if (ep && ep.episode_number != null && ep.season_number != null) {
-                const s = String(ep.season_number).padStart(2, '0');
-                const e = String(ep.episode_number).padStart(2, '0');
-                return `S${s}E${e}`;
-              }
-              if (ep && ep.air_date) return `D:${ep.air_date}`;
-              return null;
-            };
-            if (!episode.is_merged) {
-              const key = makeKey(episode);
-              if (!key) return false;
-              return list.includes(key);
-            }
-            // 合并模式：任一原始集命中即可
-            if (Array.isArray(episode.original_episodes) && episode.original_episodes.length > 0) {
-              return episode.original_episodes.some(ep => {
-                const key = makeKey({
-                  season_number: ep.season_number || episode.season_number,
-                  episode_number: ep.episode_number,
-                  air_date: ep.air_date || episode.air_date
-                });
-                return key && list.includes(key);
-              });
-            }
-            // 兜底：用合并后的显示信息尝试一次
-            const key = makeKey(episode);
-            return key ? list.includes(key) : false;
-          } catch (e) { return false; }
-        },
-
-        // 判断管理视图中的任务是否有当日更新
-        isCalendarTaskUpdatedToday(task) {
-          try {
-            const name = task && (task.task_name || task.taskname);
-            if (!name) return false;
-            return !!(this.calendar.todayUpdatesByTaskName && this.calendar.todayUpdatesByTaskName[name]);
-          } catch (e) { return false; }
-        },
-        generateMovieSavePath(template, title, year) {
-          // 生成电影保存路径
-          let savePath = template;
-
-          // 替换片名
-          savePath = savePath.replace(/片名/g, title);
-
-          // 替换年份
-          if (year) {
-            savePath = savePath.replace(/年份/g, year);
-          } else {
-            // 如果没有年份，移除年份相关的括号
-            savePath = savePath.replace(/\s*\(年份\)/g, '');
-          }
-
-          return savePath;
-        },
-        generateTvSavePath(template, seriesName, year, season, isFirstSeason) {
-          // 生成电视剧保存路径
-          let savePath = template;
-
-          // 替换剧名
-          savePath = savePath.replace(/剧名/g, seriesName);
-
-          // 替换季数
-          savePath = savePath.replace(/季数/g, season);
-
-          // 处理年份：如果不是第一季，忽略年份信息
-          if (isFirstSeason && year) {
-            savePath = savePath.replace(/年份/g, year);
-          } else {
-            // 移除年份相关的部分
-            savePath = savePath.replace(/\s*\(年份\)\//g, '/');
-            savePath = savePath.replace(/\s*\(年份\)/g, '');
-          }
-
-          return savePath;
-        },
-        generateTvNamingRule(template, seriesName, season) {
-          // 生成电视剧命名规则
-          let namingRule = template;
-
-          // 替换剧名
-          namingRule = namingRule.replace(/剧名/g, seriesName);
-
-          // 替换季数
-          namingRule = namingRule.replace(/季数/g, season);
-
-          return namingRule;
-        },
-        generateMovieNamingRule(replaceTemplate, movieTitle, year) {
-          // 生成电影命名规则
-          let namingRule = replaceTemplate;
-
-          // 替换片名
-          namingRule = namingRule.replace(/片名/g, movieTitle);
-
-          // 替换年份
-          if (year) {
-            namingRule = namingRule.replace(/年份/g, year);
-          } else {
-            // 如果没有年份，移除包含年份的部分
-            namingRule = namingRule.replace(/\s*\(年份\)/g, '');
-            namingRule = namingRule.replace(/\s*（年份）/g, '');
-          }
-
-          // 注意：正则表达式的反向引用（如\2）保持不变，将在实际重命名时由正则引擎处理
-
-          return namingRule;
-        },
         generateCustomFolderPath(taskData) {
-          // 根据任务设置生成自定义文件夹路径
-          const taskSettings = this.formData.task_settings || {};
-          const movieData = this.createTask.movieData;
-
-          if (!movieData) {
-            return taskData.taskname; // 如果没有影视数据，使用任务名称
-          }
-
-          // 获取当前榜单类型
-          const selectedMainCategory = this.discovery.selectedMainCategory;
-          const categoryNameMap = {
-            'movie_hot': '热门电影',
-            'movie_latest': '最新电影',
-            'movie_top': '豆瓣高分',
-            'movie_underrated': '冷门佳片',
-            'tv_drama': '热门剧集',
-            'tv_animation': '热门动画',
-            'tv_variety': '热门综艺',
-            'tv_documentary': '热门纪录片'
-          };
-
-          const currentRanking = categoryNameMap[selectedMainCategory] || '热门电影';
-
-          // 判断内容类型
-          let contentType = 'movie';
-          if (currentRanking.includes('剧集')) {
-            contentType = 'tv';
-          } else if (currentRanking.includes('动画')) {
-            contentType = 'anime';
-          } else if (currentRanking.includes('综艺')) {
-            contentType = 'variety';
-          } else if (currentRanking.includes('纪录片')) {
-            contentType = 'documentary';
-          }
-
-          // 检查是否有自定义路径设置
-          let savePathTemplate = '';
-          if (contentType === 'tv') {
-            savePathTemplate = taskSettings.tv_save_path;
-          } else if (contentType === 'anime') {
-            savePathTemplate = taskSettings.anime_save_path;
-          } else if (contentType === 'variety') {
-            savePathTemplate = taskSettings.variety_save_path;
-          } else if (contentType === 'documentary') {
-            savePathTemplate = taskSettings.documentary_save_path;
-          } else if (contentType === 'movie') {
-            savePathTemplate = taskSettings.movie_save_path;
-          }
-
-          // 如果没有自定义路径设置，使用任务名称
-          if (!savePathTemplate || savePathTemplate.trim() === '') {
-            return taskData.taskname;
-          }
-
-          // 提取相对路径部分（去掉前缀）
-          const pathParts = savePathTemplate.split('/');
-          let relativePath = '';
-
-          // 找到第一个包含模板变量的部分开始
-          for (let i = 0; i < pathParts.length; i++) {
-            if (pathParts[i].includes('片名') || pathParts[i].includes('剧名')) {
-              relativePath = pathParts.slice(i).join('/');
-              break;
-            }
-          }
-
-          if (!relativePath) {
-            return taskData.taskname;
-          }
-
-          const title = movieData.title || taskData.taskname;
-          const year = movieData.year || '';
-
-          if (contentType === 'movie') {
-            // 电影类型：使用generateMovieSavePath的逻辑
-            return this.generateMovieSavePath(relativePath, title, year);
-          } else {
-            // 电视类型：使用generateTvSavePath的逻辑
-            const tvInfo = this.extractTvInfo(title);
-            return this.generateTvSavePath(relativePath, tvInfo.seriesName, year, tvInfo.season, tvInfo.isFirstSeason);
-          }
+          return (taskData && taskData.taskname) || "";
         },
         extractYearFromCardSubtitle(cardSubtitle) {
           // 从card_subtitle中提取年份
@@ -18696,10 +17877,6 @@
           // 确保剧集识别模式字段存在（但不自动添加默认规则）
           if (!this.formData.episode_patterns) {
             this.formData.episode_patterns = [];
-          }
-          // 确保电视节目任务识别关键词字段存在（默认留空）
-          if (!Array.isArray(this.formData.tv_show_keywords)) {
-            this.formData.tv_show_keywords = [];
           }
           
           // 如果当前标签是历史记录，则加载历史记录

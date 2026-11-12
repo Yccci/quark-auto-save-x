@@ -904,6 +904,13 @@ select.form-control {
   border-bottom-right-radius: 0 !important; /* 移除右下角圆角 */
 }
 
+.save-path-preset-select {
+  width: auto;
+  max-width: 8.5rem;
+  flex: 0 0 auto;
+  border-radius: 0 !important;
+}
+
 /* 为确保输入组中select元素的边角正确 */
 .input-group-prepend + div > select.form-control {
   border-top-left-radius: 0 !important;
