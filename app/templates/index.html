@@ -748,7 +748,7 @@
             </div>
 
             <!-- 任务设置模块 -->
-            <div class="row title" title="配置保存路径预设。每个预设包含关键字和路径，可增删。在任务列表的保存路径后选择关键字，会按「预设路径/任务名称」填充，不会从任务名称识别类型或季数">
+            <div class="row title" title="配置保存路径预设。每个预设包含关键字、路径和过滤规则，可增删。在任务里选择关键字后，按「预设路径/任务名称」填充保存路径；若该任务的过滤规则没有手动修改过，再填入预设的过滤规则">
               <div class="col">
                 <h2 style="display: inline-block; font-size: 1.5rem;">任务设置</h2>
                 <span class="badge badge-pill badge-light">
@@ -770,6 +770,10 @@
                   <span class="input-group-text">保存路径</span>
                 </div>
                 <input type="text" class="form-control" v-model="preset.path" placeholder="目录前缀，选择后会在后面加上任务名称" title="选择该关键字后，保存路径填充为「此路径/任务名称」">
+                <div class="input-group-prepend">
+                  <span class="input-group-text">过滤规则</span>
+                </div>
+                <input type="text" class="form-control" v-model="preset.filterwords" placeholder="可选，逗号分隔，如：纯享，txt" title="选择该关键字后，若任务的过滤规则没有手动修改过，则填入这里的过滤词">
                 <div class="input-group-append">
                   <button v-if="presetIndex === formData.task_settings.save_path_presets.length - 1" type="button" class="btn btn-outline-primary" @click="addSavePathPreset" title="添加预设"><i class="bi bi-plus-lg"></i></button>
                   <button type="button" class="btn btn-outline-danger" @click="removeSavePathPreset(presetIndex)" title="删除预设"><i class="bi bi-dash-lg"></i></button>
@@ -1375,7 +1379,7 @@
                     <label class="col-sm-2 col-form-label">过滤规则</label>
                     <div class="col-sm-10">
                       <div class="input-group">
-                        <input type="text" name="filterwords[]" class="form-control" v-model="task.filterwords" placeholder="可选，输入过滤词汇，用逗号分隔，如：纯享，txt，超前企划，名称包含过滤词汇的项目不会被转存，支持使用保留词|过滤词的格式实现高级过滤">
+                        <input type="text" name="filterwords[]" class="form-control" v-model="task.filterwords" @input="markFilterwordsManual(task)" placeholder="可选，输入过滤词汇，用逗号分隔，如：纯享，txt，超前企划，名称包含过滤词汇的项目不会被转存，支持使用保留词|过滤词的格式实现高级过滤">
                       </div>
                     </div>
                   </div>
@@ -2967,7 +2971,7 @@
                 <label class="col-sm-2 col-form-label">过滤规则</label>
                 <div class="col-sm-10">
                   <div class="input-group">
-                    <input type="text" name="filterwords[]" class="form-control" v-model="createTask.taskData.filterwords" placeholder="可选，输入过滤词汇，用逗号分隔，名称包含过滤词汇的项目不会被转存，支持使用保留词|过滤词的格式实现高级过滤">
+                    <input type="text" name="filterwords[]" class="form-control" v-model="createTask.taskData.filterwords" @input="markFilterwordsManual(createTask.taskData)" placeholder="可选，输入过滤词汇，用逗号分隔，名称包含过滤词汇的项目不会被转存，支持使用保留词|过滤词的格式实现高级过滤">
                   </div>
                 </div>
               </div>
@@ -3289,11 +3293,11 @@
           episode_patterns: [],
           task_settings: {
             save_path_presets: [
-              { keyword: "电影", path: "电影目录前缀" },
-              { keyword: "剧集", path: "剧集目录前缀" },
-              { keyword: "动画", path: "动画目录前缀" },
-              { keyword: "综艺", path: "综艺目录前缀" },
-              { keyword: "纪录片", path: "纪录片目录前缀" }
+              { keyword: "电影", path: "电影目录前缀", filterwords: "" },
+              { keyword: "剧集", path: "剧集目录前缀", filterwords: "" },
+              { keyword: "动画", path: "动画目录前缀", filterwords: "" },
+              { keyword: "综艺", path: "综艺目录前缀", filterwords: "" },
+              { keyword: "纪录片", path: "纪录片目录前缀", filterwords: "" }
             ],
             search_preferred_sharers: "",
             search_blocked_sharers: ""
@@ -10395,11 +10399,11 @@
 
         defaultSavePathPresets() {
           return [
-            { keyword: "电影", path: "电影目录前缀" },
-            { keyword: "剧集", path: "剧集目录前缀" },
-            { keyword: "动画", path: "动画目录前缀" },
-            { keyword: "综艺", path: "综艺目录前缀" },
-            { keyword: "纪录片", path: "纪录片目录前缀" }
+            { keyword: "电影", path: "电影目录前缀", filterwords: "" },
+            { keyword: "剧集", path: "剧集目录前缀", filterwords: "" },
+            { keyword: "动画", path: "动画目录前缀", filterwords: "" },
+            { keyword: "综艺", path: "综艺目录前缀", filterwords: "" },
+            { keyword: "纪录片", path: "纪录片目录前缀", filterwords: "" }
           ];
         },
         legacySavePathToPrefix(value, fallback) {
@@ -10433,7 +10437,8 @@
             taskSettings.save_path_presets = hasLegacy
               ? legacyMap.map(item => ({
                   keyword: item.keyword,
-                  path: this.legacySavePathToPrefix(taskSettings[item.key], item.fallback)
+                  path: this.legacySavePathToPrefix(taskSettings[item.key], item.fallback),
+                  filterwords: ""
                 }))
               : this.defaultSavePathPresets();
           } else {
@@ -10441,7 +10446,8 @@
               .filter(item => item && typeof item === "object")
               .map(item => ({
                 keyword: String(item.keyword || "").trim(),
-                path: String(item.path || "").trim()
+                path: String(item.path || "").trim(),
+                filterwords: String(item.filterwords || "").trim()
               }));
           }
           legacyKeys.forEach(key => { delete taskSettings[key]; });
@@ -10467,7 +10473,7 @@
           if (!Array.isArray(this.formData.task_settings.save_path_presets)) {
             this.$set(this.formData.task_settings, "save_path_presets", []);
           }
-          this.formData.task_settings.save_path_presets.push({ keyword: "", path: "" });
+          this.formData.task_settings.save_path_presets.push({ keyword: "", path: "", filterwords: "" });
         },
         removeSavePathPreset(index) {
           const list = this.formData.task_settings && this.formData.task_settings.save_path_presets;
@@ -10493,6 +10499,41 @@
           if (temp) temp.remove();
           if (select.options.length) select.selectedIndex = 0;
         },
+        filterwordsState(task) {
+          if (!this._filterwordsState) this._filterwordsState = new WeakMap();
+          let state = this._filterwordsState.get(task);
+          if (!state) {
+            state = { manual: false, auto: null };
+            this._filterwordsState.set(task, state);
+          }
+          return state;
+        },
+        markFilterwordsManual(task) {
+          if (!task) return;
+          const state = this.filterwordsState(task);
+          if (state.auto !== null && String(task.filterwords || "") === state.auto) return;
+          state.manual = true;
+        },
+        resetFilterwordsState(task) {
+          if (!task || !this._filterwordsState) return;
+          this._filterwordsState.delete(task);
+        },
+        applyPresetFilterwords(task, preset) {
+          if (!task || !preset) return;
+          const state = this.filterwordsState(task);
+          if (state.manual) return;
+          const current = String(task.filterwords || "");
+          const matchesPreset = current !== "" && this.getSavePathPresets().some(item => String(item.filterwords || "") === current);
+          const untouched = current === "" || (state.auto !== null && current === state.auto) || matchesPreset;
+          if (!untouched) {
+            state.manual = true;
+            return;
+          }
+          const next = String(preset.filterwords || "");
+          task.filterwords = next;
+          state.auto = next;
+          state.manual = false;
+        },
         applySavePathPreset(task, event) {
           const select = event && event.target;
           const keyword = select ? select.value : "";
@@ -10502,6 +10543,7 @@
           const preset = this.findSavePathPreset(keyword);
           if (!preset) return;
           task.savepath = this.buildSavePathFromPreset(preset, task.taskname);
+          this.applyPresetFilterwords(task, preset);
           if (this.smart_param.index === -1
               ? task === this.createTask.taskData
               : task === (this.formData.tasklist || [])[this.smart_param.index]) {
@@ -17196,6 +17238,8 @@
           this.createTask.taskData.enddate = "";
           this.createTask.taskData.runweek = [1, 2, 3, 4, 5, 6, 7];
           this.createTask.taskData.filterwords = "";
+          this.resetFilterwordsState(this.createTask.taskData);
+          if (preset) this.applyPresetFilterwords(this.createTask.taskData, preset);
           this.createTask.taskData.startfid = "";
           this.createTask.taskData.update_subdir = "";
           if (this.formData.task_plugins_config_default) {
