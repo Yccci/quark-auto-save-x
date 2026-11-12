@@ -1334,11 +1334,12 @@
                     <label class="col-sm-2 col-form-label">保存路径</label>
                     <div class="col-sm-10">
                       <div class="input-group">
+                        <div class="input-group-prepend" v-if="savePathPresetOptions.length">
+                          <select class="form-control save-path-preset-select" title="选择预设关键字，按对应路径和任务名称填充保存路径" @mousedown="prepareSavePathPresetSelect" @change="applySavePathPreset(task, $event)" @blur="resetSavePathPresetSelect">
+                            <option v-for="(preset, presetOptionIndex) in savePathPresetOptions" :key="preset.keyword + '-' + presetOptionIndex" :value="preset.keyword">{{ preset.keyword }}</option>
+                          </select>
+                        </div>
                         <input type="text" name="savepath[]" class="form-control" v-model="task.savepath" placeholder="必填" @focus="focusTaskname(task.__originalIndex !== undefined ? task.__originalIndex : index, task)" @input="onSavepathChange(task.__originalIndex !== undefined ? task.__originalIndex : index, task)">
-                        <select v-if="savePathPresetOptions.length" class="form-control save-path-preset-select" title="选择预设关键字，按对应路径和任务名称填充保存路径" @change="applySavePathPreset(task, $event)">
-                          <option value="">预设</option>
-                          <option v-for="preset in savePathPresetOptions" :key="preset.keyword" :value="preset.keyword">{{ preset.keyword }}</option>
-                        </select>
                         <div class="input-group-append">
                           <button class="btn btn-outline-secondary" type="button" v-if="smart_param.savepath && smart_param.index == (task.__originalIndex !== undefined ? task.__originalIndex : index) && task.savepath != smart_param.origin_savepath" @click="task.savepath = smart_param.origin_savepath" title="恢复保存路径"><i class="bi bi-reply"></i></button>
                           <button class="btn btn-outline-secondary" type="button" @click="showSavepathSelect(task.__originalIndex !== undefined ? task.__originalIndex : index)" title="选择保存到的文件夹"><i class="bi bi-folder"></i></button>
@@ -2925,11 +2926,12 @@
                 <label class="col-sm-2 col-form-label">保存路径</label>
                 <div class="col-sm-10">
                   <div class="input-group">
+                    <div class="input-group-prepend" v-if="savePathPresetOptions.length">
+                      <select class="form-control save-path-preset-select" title="选择预设关键字，按对应路径和任务名称填充保存路径" @mousedown="prepareSavePathPresetSelect" @change="applySavePathPreset(createTask.taskData, $event)" @blur="resetSavePathPresetSelect">
+                        <option v-for="(preset, presetOptionIndex) in savePathPresetOptions" :key="'create-' + preset.keyword + '-' + presetOptionIndex" :value="preset.keyword">{{ preset.keyword }}</option>
+                      </select>
+                    </div>
                     <input type="text" name="savepath[]" class="form-control" v-model="createTask.taskData.savepath" placeholder="必填" @focus="focusTaskname(-1, createTask.taskData)" @input="onSavepathChange(-1, createTask.taskData)">
-                    <select v-if="savePathPresetOptions.length" class="form-control save-path-preset-select" title="选择预设关键字，按对应路径和任务名称填充保存路径" @change="applySavePathPreset(createTask.taskData, $event)">
-                      <option value="">预设</option>
-                      <option v-for="preset in savePathPresetOptions" :key="'create-' + preset.keyword" :value="preset.keyword">{{ preset.keyword }}</option>
-                    </select>
                     <div class="input-group-append">
                       <button class="btn btn-outline-secondary" type="button" v-if="smart_param.savepath && smart_param.index == -1 && createTask.taskData.savepath != smart_param.origin_savepath" @click="createTask.taskData.savepath = smart_param.origin_savepath" title="恢复保存路径"><i class="bi bi-reply"></i></button>
                       <button class="btn btn-outline-secondary" type="button" @click="showSavepathSelect(-1)" title="选择保存到的文件夹"><i class="bi bi-folder"></i></button>
@@ -10374,13 +10376,37 @@
           if (!Array.isArray(list)) return;
           list.splice(index, 1);
         },
+        prepareSavePathPresetSelect(event) {
+          const select = event && event.currentTarget;
+          if (!select || select.querySelector('option[data-preset-temp]')) return;
+          const current = select.options[select.selectedIndex];
+          const temp = document.createElement('option');
+          temp.value = '\0preset-temp';
+          temp.textContent = current ? current.textContent : '';
+          temp.hidden = true;
+          temp.dataset.presetTemp = '1';
+          select.insertBefore(temp, select.options[0]);
+          select.selectedIndex = 0;
+        },
+        resetSavePathPresetSelect(event) {
+          const select = event && event.currentTarget;
+          if (!select) return;
+          const temp = select.querySelector('option[data-preset-temp]');
+          if (temp) temp.remove();
+          if (select.options.length) select.selectedIndex = 0;
+        },
         applySavePathPreset(task, event) {
-          const keyword = event && event.target ? event.target.value : "";
-          if (event && event.target) event.target.value = "";
-          if (!task || !keyword) return;
+          const select = event && event.target;
+          const keyword = select ? select.value : "";
+          if (!keyword || keyword === '\0preset-temp') return;
+          if (select) this.resetSavePathPresetSelect({ currentTarget: select });
+          if (!task) return;
           const preset = this.findSavePathPreset(keyword);
           if (!preset) return;
           task.savepath = this.buildSavePathFromPreset(preset, task.taskname);
+          this.$nextTick(() => {
+            if (select && select.options && select.options.length) select.selectedIndex = 0;
+          });
         },
         changeTaskname(index, task) {
           if (this.smart_param.searchTimer) {
