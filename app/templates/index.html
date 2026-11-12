@@ -1341,7 +1341,7 @@
                         </div>
                         <input type="text" name="savepath[]" class="form-control" v-model="task.savepath" placeholder="必填" @focus="focusTaskname(task.__originalIndex !== undefined ? task.__originalIndex : index, task)" @input="onSavepathChange(task.__originalIndex !== undefined ? task.__originalIndex : index, task)">
                         <div class="input-group-append">
-                          <button class="btn btn-outline-secondary" type="button" v-if="smart_param.savepath && smart_param.index == (task.__originalIndex !== undefined ? task.__originalIndex : index) && task.savepath != smart_param.origin_savepath" @click="task.savepath = smart_param.origin_savepath" title="恢复保存路径"><i class="bi bi-reply"></i></button>
+                          <button class="btn btn-outline-secondary" type="button" v-if="smart_param.savepath && smart_param.index == (task.__originalIndex !== undefined ? task.__originalIndex : index) && task.savepath != smart_param.origin_savepath" @click="restoreSavepath(task.__originalIndex !== undefined ? task.__originalIndex : index, task)" title="恢复保存路径"><i class="bi bi-reply"></i></button>
                           <button class="btn btn-outline-secondary" type="button" @click="showSavepathSelect(task.__originalIndex !== undefined ? task.__originalIndex : index)" title="选择保存到的文件夹"><i class="bi bi-folder"></i></button>
                           <button type="button" class="btn btn-outline-secondary" @click="resetFolderContent(task.__originalIndex !== undefined ? task.__originalIndex : index)" title="重置文件夹：此操作将删除当前保存路径中的所有文件及相关转存记录，且不可恢复，请谨慎操作"><i class="bi bi-folder-x"></i></button>
                         </div>
@@ -2933,7 +2933,7 @@
                     </div>
                     <input type="text" name="savepath[]" class="form-control" v-model="createTask.taskData.savepath" placeholder="必填" @focus="focusTaskname(-1, createTask.taskData)" @input="onSavepathChange(-1, createTask.taskData)">
                     <div class="input-group-append">
-                      <button class="btn btn-outline-secondary" type="button" v-if="smart_param.savepath && smart_param.index == -1 && createTask.taskData.savepath != smart_param.origin_savepath" @click="createTask.taskData.savepath = smart_param.origin_savepath" title="恢复保存路径"><i class="bi bi-reply"></i></button>
+                      <button class="btn btn-outline-secondary" type="button" v-if="smart_param.savepath && smart_param.index == -1 && createTask.taskData.savepath != smart_param.origin_savepath" @click="restoreSavepath(-1, createTask.taskData)" title="恢复保存路径"><i class="bi bi-reply"></i></button>
                       <button class="btn btn-outline-secondary" type="button" @click="showSavepathSelect(-1)" title="选择保存到的文件夹"><i class="bi bi-folder"></i></button>
                       <button type="button" class="btn btn-outline-secondary" @click="resetFolderContent(-1)" title="重置文件夹：此操作将删除当前保存路径中的所有文件及相关转存记录，且不可恢复，请谨慎操作"><i class="bi bi-folder-x"></i></button>
                     </div>
@@ -9806,14 +9806,86 @@
           this.smart_param.focusContextKey = nextFocusContextKey;
           this.smart_param.index = index
           this.smart_param.origin_savepath = task.savepath
-          regex = new RegExp(`/${task.taskname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(/|$)`)
-          if (task.savepath.includes('TASKNAME')) {
-            this.smart_param.savepath = task.savepath;
-          } else if (task.savepath.match(regex)) {
-            this.smart_param.savepath = task.savepath.replace(task.taskname, 'TASKNAME');
-          } else {
+          this.linkSavePathToTaskname(index, task);
+        },
+        normalizeTaskFolderName(name) {
+          return String(name || "").replace(/\s+/g, " ").trim().replace(/^\/+|\/+$/g, "");
+        },
+        matchSavePathPresetBase(savepath) {
+          const normalized = String(savepath || "").trim().replace(/\/+$/, "");
+          if (!normalized) return "";
+          const found = this.getSavePathPresets().some(item => {
+            const base = String(item.path || "").trim().replace(/\/+$/, "");
+            return base && base === normalized;
+          });
+          return found ? normalized : "";
+        },
+        // 保存路径最后一级等于任务名称，或当前路径就是某个预设目录时，记录联动模板
+        linkSavePathToTaskname(index, task) {
+          if (!task) {
+            this.smart_param.savepathLink = null;
             this.smart_param.savepath = undefined;
+            return;
           }
+          const name = this.normalizeTaskFolderName(task.taskname);
+          const savepath = String(task.savepath || "").replace(/\/+$/, "");
+          if (savepath.includes("TASKNAME")) {
+            const parts = savepath.split("/");
+            this.smart_param.savepathLink = {
+              index,
+              taskname: name,
+              base: parts.slice(0, -1).join("/")
+            };
+            this.smart_param.savepath = savepath;
+            return;
+          }
+          const parts = savepath ? savepath.split("/") : [];
+          const last = parts.length ? parts[parts.length - 1] : "";
+          if (name && last === name) {
+            const base = parts.slice(0, -1).join("/");
+            this.smart_param.savepathLink = { index, taskname: name, base };
+            this.smart_param.savepath = (base ? `${base}/` : "") + "TASKNAME";
+            return;
+          }
+          const presetBase = this.matchSavePathPresetBase(savepath);
+          if (presetBase) {
+            this.smart_param.savepathLink = { index, taskname: "", base: presetBase };
+            this.smart_param.savepath = `${presetBase}/TASKNAME`;
+            return;
+          }
+          this.smart_param.savepathLink = null;
+          this.smart_param.savepath = undefined;
+        },
+        syncSavePathWithTaskname(index, task) {
+          const link = this.smart_param.savepathLink;
+          if (!task || !link || link.index !== index) return;
+          const name = this.normalizeTaskFolderName(task.taskname);
+          const savepath = String(task.savepath || "").replace(/\/+$/, "");
+          const parts = savepath ? savepath.split("/") : [];
+          const last = parts.length ? parts[parts.length - 1] : "";
+          if (link.taskname) {
+            if (last !== link.taskname) return;
+            if (name) {
+              parts[parts.length - 1] = name;
+              task.savepath = parts.join("/");
+              link.base = parts.slice(0, -1).join("/");
+            } else {
+              parts.pop();
+              task.savepath = parts.join("/");
+              link.base = task.savepath;
+            }
+            link.taskname = name;
+            return;
+          }
+          if (savepath === link.base && name) {
+            task.savepath = link.base ? `${link.base}/${name}` : name;
+            link.taskname = name;
+          }
+        },
+        restoreSavepath(index, task) {
+          if (!task) return;
+          task.savepath = this.smart_param.origin_savepath;
+          this.linkSavePathToTaskname(index, task);
         },
         // Sxx季数信息和格式同步工具函数
         syncSeasonNumberAndFormat(sourceValue, targetValue) {
@@ -9855,6 +9927,8 @@
 
         // 保存路径变化时的处理函数
         onSavepathChange(index, task) {
+          this.smart_param.index = index;
+          this.linkSavePathToTaskname(index, task);
           // 同步Sxx和格式到命名规则
           if (task.pattern) {
             task.pattern = this.syncFormatFromSavepath(task.savepath, task.pattern);
@@ -10404,11 +10478,17 @@
           const preset = this.findSavePathPreset(keyword);
           if (!preset) return;
           task.savepath = this.buildSavePathFromPreset(preset, task.taskname);
+          if (this.smart_param.index === -1
+              ? task === this.createTask.taskData
+              : task === (this.formData.tasklist || [])[this.smart_param.index]) {
+            this.linkSavePathToTaskname(this.smart_param.index, task);
+          }
           this.$nextTick(() => {
             if (select && select.options && select.options.length) select.selectedIndex = 0;
           });
         },
         changeTaskname(index, task) {
+          this.syncSavePathWithTaskname(index, task);
           if (this.smart_param.searchTimer) {
             clearTimeout(this.smart_param.searchTimer);
           }
@@ -12451,12 +12531,14 @@
                 const customFolderPath = this.generateCustomFolderPath(this.createTask.taskData);
                 this.createTask.taskData.savepath += "/" + customFolderPath;
               }
+              this.linkSavePathToTaskname(-1, this.createTask.taskData);
             } else if (this.fileSelect.index !== null && this.fileSelect.index >= 0 && this.formData.tasklist[this.fileSelect.index]) {
               // 去掉前导斜杠，避免双斜杠问题
               this.formData.tasklist[this.fileSelect.index].savepath = this.fileSelect.paths.map(item => item.name).join("/");
               if (addTaskname) {
                 this.formData.tasklist[this.fileSelect.index].savepath += "/" + this.formData.tasklist[this.fileSelect.index].taskname
               }
+              this.linkSavePathToTaskname(this.fileSelect.index, this.formData.tasklist[this.fileSelect.index]);
             }
           }
           if (!this.fileSelect.moveMode) {
