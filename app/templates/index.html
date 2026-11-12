@@ -9820,7 +9820,14 @@
           });
           return found ? normalized : "";
         },
-        // 保存路径最后一级等于任务名称，或当前路径就是某个预设目录时，记录联动模板
+        findTasknameSegmentIndex(parts, name) {
+          if (!name || !parts || !parts.length) return -1;
+          for (let i = parts.length - 1; i >= 0; i--) {
+            if (parts[i] === name) return i;
+          }
+          return -1;
+        },
+        // 路径中任一目录名等于任务名称时记录该级；都对不上时，若整段路径就是预设目录则准备追加
         linkSavePathToTaskname(index, task) {
           if (!task) {
             this.smart_param.savepathLink = null;
@@ -9829,27 +9836,34 @@
           }
           const name = this.normalizeTaskFolderName(task.taskname);
           const savepath = String(task.savepath || "").replace(/\/+$/, "");
-          if (savepath.includes("TASKNAME")) {
-            const parts = savepath.split("/");
+          const parts = savepath ? savepath.split("/") : [];
+          const tokenIndex = parts.lastIndexOf("TASKNAME");
+          if (tokenIndex >= 0) {
             this.smart_param.savepathLink = {
               index,
-              taskname: name,
-              base: parts.slice(0, -1).join("/")
+              taskname: "TASKNAME",
+              segmentIndex: tokenIndex,
+              base: parts.slice(0, tokenIndex).join("/")
             };
             this.smart_param.savepath = savepath;
             return;
           }
-          const parts = savepath ? savepath.split("/") : [];
-          const last = parts.length ? parts[parts.length - 1] : "";
-          if (name && last === name) {
-            const base = parts.slice(0, -1).join("/");
-            this.smart_param.savepathLink = { index, taskname: name, base };
-            this.smart_param.savepath = (base ? `${base}/` : "") + "TASKNAME";
+          const segmentIndex = this.findTasknameSegmentIndex(parts, name);
+          if (segmentIndex >= 0) {
+            const templateParts = parts.slice();
+            templateParts[segmentIndex] = "TASKNAME";
+            this.smart_param.savepathLink = {
+              index,
+              taskname: name,
+              segmentIndex,
+              base: parts.slice(0, segmentIndex).join("/")
+            };
+            this.smart_param.savepath = templateParts.join("/");
             return;
           }
           const presetBase = this.matchSavePathPresetBase(savepath);
           if (presetBase) {
-            this.smart_param.savepathLink = { index, taskname: "", base: presetBase };
+            this.smart_param.savepathLink = { index, taskname: "", segmentIndex: -1, base: presetBase };
             this.smart_param.savepath = `${presetBase}/TASKNAME`;
             return;
           }
@@ -9862,24 +9876,34 @@
           const name = this.normalizeTaskFolderName(task.taskname);
           const savepath = String(task.savepath || "").replace(/\/+$/, "");
           const parts = savepath ? savepath.split("/") : [];
-          const last = parts.length ? parts[parts.length - 1] : "";
           if (link.taskname) {
-            if (last !== link.taskname) return;
+            let segmentIndex = link.segmentIndex;
+            if (parts[segmentIndex] !== link.taskname) {
+              segmentIndex = this.findTasknameSegmentIndex(parts, link.taskname);
+            }
+            if (segmentIndex < 0) return;
             if (name) {
-              parts[parts.length - 1] = name;
+              parts[segmentIndex] = name;
               task.savepath = parts.join("/");
-              link.base = parts.slice(0, -1).join("/");
+              link.segmentIndex = segmentIndex;
+              link.base = parts.slice(0, segmentIndex).join("/");
             } else {
-              parts.pop();
+              parts.splice(segmentIndex, 1);
               task.savepath = parts.join("/");
+              link.segmentIndex = segmentIndex;
               link.base = task.savepath;
             }
             link.taskname = name;
             return;
           }
           if (savepath === link.base && name) {
-            task.savepath = link.base ? `${link.base}/${name}` : name;
+            const insertAt = link.segmentIndex >= 0 && link.segmentIndex <= parts.length
+              ? link.segmentIndex
+              : parts.length;
+            parts.splice(insertAt, 0, name);
+            task.savepath = parts.join("/");
             link.taskname = name;
+            link.segmentIndex = insertAt;
           }
         },
         restoreSavepath(index, task) {
