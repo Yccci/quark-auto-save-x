@@ -1339,7 +1339,7 @@
                     <div class="col-sm-10">
                       <div class="input-group">
                         <div class="input-group-prepend" v-if="savePathPresetOptions.length">
-                          <select class="form-control save-path-preset-select" title="选择预设关键字，按对应路径和任务名称填充保存路径" @mousedown="prepareSavePathPresetSelect" @change="applySavePathPreset(task, $event)" @blur="resetSavePathPresetSelect">
+                          <select class="form-control save-path-preset-select" :value="activeSavePathPresetKeyword(task)" :data-preset="activeSavePathPresetKeyword(task)" title="选择预设，按对应路径和任务名称填充保存路径" @mousedown="prepareSavePathPresetSelect" @change="applySavePathPreset(task, $event)" @blur="resetSavePathPresetSelect">
                             <option v-for="(preset, presetOptionIndex) in savePathPresetOptions" :key="preset.keyword + '-' + presetOptionIndex" :value="preset.keyword">{{ preset.keyword }}</option>
                           </select>
                         </div>
@@ -2931,7 +2931,7 @@
                 <div class="col-sm-10">
                   <div class="input-group">
                     <div class="input-group-prepend" v-if="savePathPresetOptions.length">
-                      <select class="form-control save-path-preset-select" title="选择预设关键字，按对应路径和任务名称填充保存路径" @mousedown="prepareSavePathPresetSelect" @change="applySavePathPreset(createTask.taskData, $event)" @blur="resetSavePathPresetSelect">
+                      <select class="form-control save-path-preset-select" :value="activeSavePathPresetKeyword(createTask.taskData)" :data-preset="activeSavePathPresetKeyword(createTask.taskData)" title="选择预设，按对应路径和任务名称填充保存路径" @mousedown="prepareSavePathPresetSelect" @change="applySavePathPreset(createTask.taskData, $event)" @blur="resetSavePathPresetSelect">
                         <option v-for="(preset, presetOptionIndex) in savePathPresetOptions" :key="'create-' + preset.keyword + '-' + presetOptionIndex" :value="preset.keyword">{{ preset.keyword }}</option>
                       </select>
                     </div>
@@ -10480,6 +10480,47 @@
           if (!Array.isArray(list)) return;
           list.splice(index, 1);
         },
+        rememberSavePathPreset(task, keyword) {
+          if (!task) return;
+          if (!this._savePathPresetChoice) this._savePathPresetChoice = new WeakMap();
+          this._savePathPresetChoice.set(task, keyword || "");
+        },
+        rememberedSavePathPreset(task) {
+          if (!task || !this._savePathPresetChoice) return "";
+          return this._savePathPresetChoice.get(task) || "";
+        },
+        matchPresetKeywordBySavepath(savepath) {
+          const path = String(savepath || "").trim().replace(/\/+$/, "");
+          if (!path) return "";
+          let matched = "";
+          let matchedLength = -1;
+          this.savePathPresetOptions.forEach(preset => {
+            const base = String(preset.path || "").trim().replace(/\/+$/, "");
+            if (!base) return;
+            if (path === base || path.startsWith(base + "/")) {
+              if (base.length > matchedLength) {
+                matched = preset.keyword;
+                matchedLength = base.length;
+              }
+            }
+          });
+          return matched;
+        },
+        activeSavePathPresetKeyword(task) {
+          const options = this.savePathPresetOptions;
+          if (!options.length) return "";
+          const matched = this.matchPresetKeywordBySavepath(task && task.savepath);
+          if (matched && options.some(preset => preset.keyword === matched)) return matched;
+          const remembered = this.rememberedSavePathPreset(task);
+          if (remembered && options.some(preset => preset.keyword === remembered)) return remembered;
+          return options[0].keyword;
+        },
+        restoreSavePathPresetSelect(select, keyword) {
+          if (!select) return;
+          const temp = select.querySelector('option[data-preset-temp]');
+          if (temp) temp.remove();
+          if (keyword && keyword !== '\0preset-temp') select.value = keyword;
+        },
         prepareSavePathPresetSelect(event) {
           const select = event && event.currentTarget;
           if (!select || select.querySelector('option[data-preset-temp]')) return;
@@ -10495,9 +10536,8 @@
         resetSavePathPresetSelect(event) {
           const select = event && event.currentTarget;
           if (!select) return;
-          const temp = select.querySelector('option[data-preset-temp]');
-          if (temp) temp.remove();
-          if (select.options.length) select.selectedIndex = 0;
+          const keyword = select.value === '\0preset-temp' ? (select.dataset.preset || "") : select.value;
+          this.restoreSavePathPresetSelect(select, keyword || select.dataset.preset || "");
         },
         filterwordsState(task) {
           if (!this._filterwordsState) this._filterwordsState = new WeakMap();
@@ -10538,10 +10578,11 @@
           const select = event && event.target;
           const keyword = select ? select.value : "";
           if (!keyword || keyword === '\0preset-temp') return;
-          if (select) this.resetSavePathPresetSelect({ currentTarget: select });
           if (!task) return;
           const preset = this.findSavePathPreset(keyword);
           if (!preset) return;
+          this.rememberSavePathPreset(task, preset.keyword);
+          if (select) this.restoreSavePathPresetSelect(select, preset.keyword);
           task.savepath = this.buildSavePathFromPreset(preset, task.taskname);
           this.applyPresetFilterwords(task, preset);
           if (this.smart_param.index === -1
@@ -10550,7 +10591,7 @@
             this.linkSavePathToTaskname(this.smart_param.index, task);
           }
           this.$nextTick(() => {
-            if (select && select.options && select.options.length) select.selectedIndex = 0;
+            if (select) this.restoreSavePathPresetSelect(select, preset.keyword);
           });
         },
         changeTaskname(index, task) {
